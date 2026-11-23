@@ -47,6 +47,12 @@ class DocumentInspectorTest {
         fails(LibraryFailure.UNSUPPORTED_ENCODING) { inspect(byteArrayOf(0xff.toByte(), 0xfe.toByte(), 0x41), "broken.txt") }
     }
 
+    @Test fun `a TXT beginning with PK is not mistaken for a ZIP archive`() {
+        val metadata = inspect("PK significa clave primaria.\nTexto válido.".toByteArray(), "Notas.txt", "text/plain")
+        assertEquals(BookFormat.TXT, metadata.format)
+        assertEquals("UTF-8", metadata.textEncoding)
+    }
+
     @Test fun `extension and known MIME cannot misrepresent a PDF as text`() {
         fails(LibraryFailure.FORMAT_MISMATCH) { inspect(DocumentFixtures.pdf(), "fake.txt", "text/plain") }
         fails(LibraryFailure.FORMAT_MISMATCH) { inspect(DocumentFixtures.epub(), "fake.pdf", "application/pdf") }

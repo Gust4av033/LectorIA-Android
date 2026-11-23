@@ -7,21 +7,21 @@ explícitamente NOT_RUN.
 | Comprobación ejecutada | Resultado |
 |---|---|
 | assembleDebug | PASS, APK 0.2.0 generado |
-| testDebugUnitTest | PASS: **37 pruebas, 0 fallos, 0 errores, 0 omitidas** |
+| testDebugUnitTest | PASS: **38 pruebas, 0 fallos, 0 errores, 0 omitidas** |
 | lintDebug | PASS: **0 errores, 7 avisos de versiones disponibles** |
 | assembleDebugAndroidTest | PASS, smoke test y PdfImportTest compilados |
 | Checks de whitespace/diff | PASS |
 | Capturas nativas de biblioteca/detalles | Generadas y revisadas visualmente |
 | Selector real / renderer PDF / instrumentación conectada | NOT_RUN por el agente |
 
-Distribución: 14 pruebas de repositorio/recuperación, 9 de inspección, 4 del flujo
+Distribución: 14 pruebas de repositorio/recuperación, 10 de inspección, 4 del flujo
 completo UI/importación, 4 de navegación, 4 de dominio, 1 de contraste y 1 de DataStore.
 
 Última ejecución completa:
 
 ```text
-BUILD SUCCESSFUL in 2m 28s
-94 actionable tasks: 24 executed, 70 up-to-date
+BUILD SUCCESSFUL in 1m 13s
+94 actionable tasks: 21 executed, 73 up-to-date
 ```
 
 ## Entorno y comandos
@@ -55,7 +55,7 @@ de pruebas ni se imponen esas rutas a Android Studio o a GitHub Actions.
   rechazo sin borrar libros. No existe una migración productiva desde Fase 0 porque
   allí no había Room; se debe añadir una migración real al cambiar el esquema.
 - **Documentos:** UTF-8, UTF-16 LE/BE con BOM, Windows-1252, español/Unicode,
-  controles binarios, MIME/extensión, EPUB con metadata/entidades XML predefinidas y
+  controles binarios, TXT con prefijo PK, MIME/extensión, EPUB con metadata/entidades XML predefinidas y
   portada PNG, rutas inseguras y codificadas, DTD, LCP/cifrado, spine ausente,
   inflación ZIP, CRC alterado y archivo ZIP que no es EPUB. PDF truncado se rechaza
   antes de entrar al renderer nativo.
@@ -121,4 +121,4 @@ demás libros. Para ensayo de interrupción usar un documento de prueba, reabrir
 app y comprobar la recuperación o incidencia explícita.
 
 APK Debug local: 13416576 bytes; SHA-256:
-`85ee3c771258fc599b36e9d6e4b2f0bd4af9bec5f15ea43ad60f77feabbddb27`. Firma de desarrollo local, no release.
+`01266626aff2bb9aa56bd873d9c4741f084c4e8350d785f395efdf08515968df`. Firma de desarrollo local, no release.

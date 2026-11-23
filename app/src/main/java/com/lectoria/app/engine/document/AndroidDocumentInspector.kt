@@ -46,8 +46,9 @@ class AndroidDocumentInspector : DocumentInspector {
             }
             val format = when {
                 prefix.take(5).toByteArray().contentEquals("%PDF-".toByteArray()) -> BookFormat.PDF
-                prefix.size >= 2 && prefix[0] == 0x50.toByte() && prefix[1] == 0x4b.toByte() -> BookFormat.EPUB
+                prefix.take(4).toByteArray().contentEquals(byteArrayOf(0x50, 0x4b, 0x03, 0x04)) -> BookFormat.EPUB
                 extension == BookFormat.TXT || mime == BookFormat.TXT -> BookFormat.TXT
+                extension != null || mime != null -> fail(LibraryFailure.INVALID_DOCUMENT)
                 else -> fail(LibraryFailure.UNSUPPORTED)
             }
             if ((extension != null && extension != format) || (mime != null && mime != format)) {
