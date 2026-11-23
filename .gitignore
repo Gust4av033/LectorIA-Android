@@ -1,0 +1,34 @@
+# Gradle / Android Studio
+.gradle/
+.kotlin/
+**/build/
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local configuration, credentials and signing
+local.properties
+.env
+.env.*
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+google-services.json
+
+# Private documents, databases and generated audio
+*.epub
+*.pdf
+*.mp3
+*.m4a
+*.wav
+*.db
+*.db-shm
+*.db-wal
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
