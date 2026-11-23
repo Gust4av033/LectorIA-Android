@@ -5,25 +5,35 @@
 Base Android implementada en `feature/fase-0-fundamentos`. Proyecto único `:app`,
 tema Compose, Hilt, navegación y contratos iniciales. La documentación de arranque
 permanece como fuente de alcance. Estado: **TESTED en entorno local** (APK Debug,
-9 pruebas y lint sin errores). Falta validación manual en dispositivo para cerrar
-todos los criterios de salida. Evidencia y limitaciones: `testing.md`.
+9 pruebas y lint sin errores, más CI aprobada). El usuario confirmó posteriormente
+Sync, ejecución desde Android Studio y arranque en celular. Esa validación es
+**reportada por el usuario**; no equivale a instrumentación física ejecutada por
+el agente. Evidencia histórica y limitaciones: `testing.md`.
 
-No hay bibliotecas ni contenido de prueba presentados como reales. Persistencia,
-importación, motores de lectura/voz, audio y nube siguen sin implementar. La salida
-completa de fase requiere además la validación visual/manual en dispositivo.
+En esa entrega no había persistencia/importación ni motores de lectura/voz. No se
+incluyen libros de muestra en producción. La Fase A añade biblioteca real sin
+adelantar lector, narración, audio ni nube.
 
-## Próxima tarea concreta — Fase A: biblioteca e importación
+## Fase A — Implementación actual
 
-1. Introducir Room y DataStore con versiones compatibles verificadas, esquemas
-   exportados y estrategia de migración. Añadir casos de uso e inyección de repositorios.
-2. Implementar SAF, copia temporal a almacenamiento privado, validación, límites,
-   hash, duplicados y estados recuperables antes de marcar un libro listo.
-3. Definir cómo validar apertura/metadata por formato sin adelantar todo el lector;
-   resolver el spike Readium y matriz Kotlin/AGP/KSP si la validación EPUB lo requiere.
-4. Mostrar libros reales y estado de importación/errores; conectar un botón Importar
-   solamente cuando realice la operación. Confirmar eliminación explícitamente.
-5. Probar inválidos, vacíos, grandes, Unicode, duplicados, importación interrumpida,
-   reinicio, reconciliación y migraciones sin perder originales ni progreso.
+Rama `feature/fase-a-biblioteca`, basada en Fase 0 porque el PR #1 seguía abierto
+al iniciar. No se fusiona main automáticamente. Room 2.8.3 y DataStore 1.2.0,
+biblioteca persistente, SAF, validación acotada, copias privadas, SHA-256,
+duplicados, búsqueda/orden, detalles y eliminación confirmada están implementados.
+El protocolo recupera VERIFIED antes/después de renombrar y conserva incidencias
+y archivos originales ante error. El esquema Room v1 está exportado y no hay
+fallback de recreación destructiva.
+
+El estado real de pruebas y los pendientes físicos están en `testing-phase-a.md`.
+PDF usa apertura/render nativos; su prueba instrumentada requiere Android real.
+La metadata EPUB de importación no sustituye el futuro lector Readium.
+
+## Siguiente tarea
+
+Validar esta entrega en el teléfono con TXT/EPUB/PDF sintéticos o autorizados,
+persistencia tras forzar detención, cancelación/duplicados y eliminación confirmada.
+Después, Fase B: resolver el spike Readium/matriz Kotlin y el extractor PDF,
+implementar lectura por formato y restauración de ubicaciones sin perder originales.
 
 ## Fases siguientes
 

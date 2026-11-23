@@ -1,5 +1,10 @@
 # Validación de Fase 0 — 23/11/2026
 
+> Este documento conserva la evidencia de Fase 0. Para las nuevas funciones de
+> biblioteca/importación consultar [testing-phase-a.md](testing-phase-a.md).
+> Posteriormente el usuario confirmó Sync y arranque desde Android Studio en su
+> celular (**USER_REPORTED**). Las pruebas conectadas no fueron ejecutadas por el agente.
+
 Base implementada y validada mediante CLI y pruebas locales. **No se declara DONE
 la validación manual en dispositivo.** La siguiente tabla contiene resultados
 ejecutados, no estimaciones.

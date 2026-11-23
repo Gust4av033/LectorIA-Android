@@ -1,4 +1,4 @@
-# Requisitos y evidencia — Fase 0
+# Requisitos y evidencia — Fases 0 y A
 
 Fuente: `MASTER_PLAN.md` y solicitud de Fase 0 del 23/11/2026.
 `IMPLEMENTED` describe código; los resultados de ejecución están en `testing.md`.
@@ -24,3 +24,27 @@ Fuente: `MASTER_PLAN.md` y solicitud de Fase 0 del 23/11/2026.
 Los identificadores y posiciones inválidas se prueban como límites del dominio.
 Las pruebas Robolectric ejercitan la Activity/Hilt/navegación reales. El smoke test
 instrumentado se compila para ejecutarlo en el dispositivo del propietario.
+
+## Fase A — Biblioteca e importación
+
+La matriz anterior corresponde a la entrega histórica de Fase 0. La fase actual
+conecta sus contratos con almacenamiento real. Resultados finales y límites en
+`testing-phase-a.md`; no inferir pruebas físicas a partir del éxito de Robolectric.
+
+| Requisito | Implementación | Evidencia |
+|---|---|---|
+| Selección EPUB/PDF/TXT con SAF y acceso acotado | OpenLibraryDocument, SafSourceReader | LibraryFlowTest: contrato OPEN_DOCUMENT/OPENABLE y proveedor sintético |
+| Copia privada, hash, tamaño y duplicados | LibraryFiles, RoomBookRepository | LibraryRepositoryTest: límites declarados/reales, identidad, concurrencia |
+| Metadata e inspección EPUB/TXT | AndroidDocumentInspector | DocumentInspectorTest y flujo EPUB con título/autor reales |
+| PDF nativo, páginas y vista previa | PdfRenderer en inspector | PdfImportTest instrumentado; ejecución conectada pendiente |
+| Room persistente sin recreación destructiva | LibraryDatabase v1, esquema exportado | Reapertura y rechazo de versión incompatible conservando datos |
+| Recuperación ante interrupción | COPYING/VERIFIED/FAILED/UNAVAILABLE | Fallos antes/después de publicar, cancelación, huérfanos, archivos faltantes |
+| Eliminación confirmada y recuperable | DeletionRequest y estado DELETING | UI cancela/confirma; datos verifican reintento y preservación de otro libro |
+| Búsqueda y orden persistente | ObserveLibrary, LibraryPreferences/DataStore | Flujo UI y cierre/reapertura de DataStore |
+| UI honesta, errores y detalles | LibraryRoute/Screen y LibraryViewModel | Pruebas de UI con Activity/Hilt/Room reales |
+| Original externo y permisos protegidos | Proveedor abierto solo para lectura; sin permiso de almacenamiento general | Test de proveedor comprueba original después de eliminar copia |
+| Continuidad de Fase 0 | Navegación y tema conservados | NavigationTest, ReadingPositionTest y ThemeContrastTest |
+
+El usuario confirmó el 23/11/2026 el Sync y arranque de Fase 0 desde Android Studio
+en su celular. Se registra como **USER_REPORTED**; no acredita ejecución de pruebas
+instrumentadas, Bluetooth o de las nuevas importaciones de Fase A.
