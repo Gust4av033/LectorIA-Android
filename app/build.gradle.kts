@@ -17,8 +17,8 @@ android {
         applicationId = "com.lectoria.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -30,6 +30,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -41,6 +42,7 @@ kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -57,6 +59,15 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.datastore.preferences)
+    implementation(libs.readium.shared)
+    implementation(libs.readium.streamer)
+    implementation(libs.pdfbox)
+    // The PDFBox port declares Bouncy Castle 1.72; use the current compatible maintained line.
+    constraints {
+        implementation(libs.bcprov)
+        implementation(libs.bcpkix)
+        implementation(libs.bcutil)
+    }
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

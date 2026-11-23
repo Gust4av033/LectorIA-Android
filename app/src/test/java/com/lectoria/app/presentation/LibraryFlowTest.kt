@@ -142,13 +142,63 @@ class LibraryFlowTest {
         compose.onNodeWithText("Lectura & memoria").performClick()
         compose.onNodeWithText("Autor: María Núñez").assertExists()
         compose.onNodeWithText("Formato: EPUB").assertExists()
-        compose.onNodeWithText("La lectura de páginas y la narración estarán disponibles en las siguientes etapas.").assertExists()
+        compose.onNodeWithTag("open_book").assertIsEnabled()
         screenshot("book-details")
         compose.onNodeWithTag("close_book_details").performClick()
         compose.onNodeWithTag("library_list").performScrollToIndex(0)
         screenshot("library-with-import")
         compose.activityRule.scenario.recreate()
         compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("book_count").assertTextEquals("1 libro") }.isSuccess }
+    }
+
+    @Test fun `reader opens real TXT and restores the displayed fragment after leaving and recreating`() {
+        val text = (1..180).joinToString("\n") { "Línea $it: niño, canción y español para probar la lectura persistente." }
+        pick(document("Leer.txt", text.toByteArray()), 1)
+        fun openBook() {
+            compose.onNodeWithTag("library_list").performScrollToNode(hasText("Leer"))
+            compose.onNodeWithText("Leer").performClick()
+            compose.onNodeWithTag("open_book").performClick()
+            compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_text").assertExists() }.isSuccess }
+        }
+        openBook()
+        compose.onNodeWithTag("reader_text").assertTextContains("Línea 1:", substring = true)
+        compose.onNodeWithTag("reader_next").performClick()
+        compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_previous").assertIsEnabled() }.isSuccess }
+        val second = compose.onNodeWithTag("reader_text").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].single().text
+        assertFalse(second.startsWith("Línea 1:"))
+        screenshot("reader-txt")
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithTag("screen_library").assertIsDisplayed()
+        openBook()
+        compose.onNodeWithTag("reader_text").assertTextEquals(second)
+        compose.activityRule.scenario.recreate()
+        compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_text").assertTextEquals(second) }.isSuccess }
+        compose.onNodeWithTag("reader_sections").performClick()
+        compose.onNodeWithTag("reader_section_0").performClick()
+        compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_text").assertTextContains("Línea 1:", substring = true) }.isSuccess }
+    }
+
+    @Test fun `invalid saved location remains intact until the user explicitly selects a section`() {
+        pick(document("Recuperar.txt", "Comienzo seguro: canción y niño.".toByteArray()), 1)
+        val context = RuntimeEnvironment.getApplication()
+        val database = androidx.room.Room.databaseBuilder(context, com.lectoria.app.data.local.LibraryDatabase::class.java, "library.db")
+            .addMigrations(com.lectoria.app.data.local.LibraryDatabase.MIGRATION_1_2).build()
+        try {
+            val repository = com.lectoria.app.data.RoomReadingProgressRepository(database)
+            val saved = kotlinx.coroutines.runBlocking {
+                val id = com.lectoria.app.domain.model.BookId(database.books().all().single().id)
+                com.lectoria.app.domain.model.ReadingProgress(id, com.lectoria.app.domain.model.ReadingLocator.Text(900000), java.time.Instant.now()).also { repository.save(it) }
+            }
+            compose.onNodeWithTag("library_list").performScrollToNode(hasText("Recuperar"))
+            compose.onNodeWithText("Recuperar").performClick()
+            compose.onNodeWithTag("open_book").performClick()
+            compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_error").assertExists() }.isSuccess }
+            assertEquals(saved.locator, kotlinx.coroutines.runBlocking { repository.load(saved.bookId) }!!.locator)
+            compose.onNodeWithTag("reader_sections").performClick()
+            compose.onNodeWithTag("reader_section_0").performClick()
+            compose.waitUntil(15_000) { runCatching { compose.onNodeWithTag("reader_text").assertTextContains("Comienzo seguro", substring = true) }.isSuccess }
+            assertEquals(com.lectoria.app.domain.model.ReadingLocator.Text(0), kotlinx.coroutines.runBlocking { repository.load(saved.bookId) }!!.locator)
+        } finally { database.close() }
     }
 
     @Test fun `search filters real metadata and the selected order survives recreation`() {

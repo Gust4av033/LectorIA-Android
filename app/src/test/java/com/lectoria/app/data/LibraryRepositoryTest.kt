@@ -264,7 +264,7 @@ class LibraryRepositoryTest {
 
     @Test fun `missing migration rejects an incompatible database without deleting stored books`() = runBlocking {
         val book = addBook("Conservar.txt", "Debe sobrevivir a un esquema incompatible.")
-        database.openHelper.writableDatabase.execSQL("PRAGMA user_version = 2")
+        database.openHelper.writableDatabase.execSQL("PRAGMA user_version = 3")
         database.close()
         database = openDatabase()
         try {

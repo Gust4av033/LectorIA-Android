@@ -72,13 +72,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun LibraryRoute(viewModel: LibraryViewModel = hiltViewModel()) {
+fun LibraryRoute(viewModel: LibraryViewModel = hiltViewModel(), onOpenBook: (String) -> Unit = {}) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val contract = remember { OpenLibraryDocument() }
     val picker = rememberLauncherForActivityResult(contract) { uri ->
         uri?.let { viewModel.importDocument(DocumentSource(it.toString())) }
     }
-    LibraryScreen(state, viewModel, onImport = {
+    LibraryScreen(state, viewModel, onOpenBook = onOpenBook, onImport = {
         try {
             picker.launch(arrayOf("application/epub+zip", "application/pdf", "text/plain", "application/octet-stream", "application/zip"))
         } catch (_: ActivityNotFoundException) { viewModel.pickerUnavailable() }
@@ -87,7 +87,7 @@ fun LibraryRoute(viewModel: LibraryViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun LibraryScreen(state: LibraryUiState, viewModel: LibraryViewModel, onImport: () -> Unit) {
+private fun LibraryScreen(state: LibraryUiState, viewModel: LibraryViewModel, onImport: () -> Unit, onOpenBook: (String) -> Unit) {
     Box(Modifier.fillMaxSize().testTag("screen_library")) {
         LazyColumn(
             modifier = Modifier.testTag("library_list"),
@@ -218,7 +218,8 @@ private fun LibraryScreen(state: LibraryUiState, viewModel: LibraryViewModel, on
                 book.textEncoding?.let { Text(stringResource(R.string.book_encoding, it)) }
                 Text(stringResource(R.string.book_date, DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(book.createdAt)))
                 Text(stringResource(if (book.available) R.string.book_saved else R.string.book_missing_detail), color = if (book.available) Midnight.Highlight else MaterialTheme.colorScheme.error)
-                Text(stringResource(R.string.book_reader_pending))
+                LectorButton(onClick = { viewModel.select(null); onOpenBook(book.id.value) }, enabled = book.available && !state.busy,
+                    modifier = Modifier.fillMaxWidth().testTag("open_book")) { Text(stringResource(R.string.reader_open)) }
             } },
             confirmButton = { LectorTextButton(onClick = { viewModel.select(null) }, modifier = Modifier.testTag("close_book_details")) { Text(stringResource(R.string.close)) } },
             dismissButton = { LectorTextButton(onClick = { viewModel.requestDelete(book) }, modifier = Modifier.testTag("request_delete")) { Text(stringResource(R.string.delete_book), color = MaterialTheme.colorScheme.error) } },

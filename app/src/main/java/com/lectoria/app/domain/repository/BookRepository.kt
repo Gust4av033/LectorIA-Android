@@ -29,4 +29,5 @@ value class DocumentSource(val value: String) {
 interface ReadingProgressRepository {
     suspend fun load(bookId: BookId): ReadingProgress?
     suspend fun save(progress: ReadingProgress)
+    suspend fun lastBook(): BookId?
 }

@@ -225,3 +225,72 @@ Las nuevas acciones usan `LectorButton`/`LectorTextButton`: texto claro sobre
 container alcanza 9.15:1 y highlight sobre surface 11.57:1. El azul primary sobre
 surface no alcanza 4.5:1 para texto normal, por lo que se conserva como token de
 acento y se usan los colores accesibles existentes para etiquetas/acciones.
+
+## ADR-009 — Fase B: adaptadores de lectura sin copias adicionales
+
+Se incorpora Readium **3.1.2 shared + streamer**, cuyo POM declara Kotlin 2.1.21
+y Coroutines 1.10.2, compatibles con Kotlin 2.2.21 del proyecto. Los POM de
+3.2.0/3.3.0 declaran Kotlin 2.3.20 y el de 3.4.0 Kotlin 2.4.20; no se ignoran
+errores de metadata ni se actualiza innecesariamente toda la toolchain.
+Readium exige core library desugaring: se habilita con **desugar_jdk_libs 2.1.5**.
+La API experimental Content de Readium queda encapsulada en el adaptador EPUB.
+
+`AndroidDocumentReader` verifica archivo, tamaño y SHA-256 antes de abrirlo.
+Cada sesión expone secciones, unidades textuales con límites estables, ubicación
+anterior/siguiente y una imagen PNG opcional. El dominio sigue sin SDK Android.
+Las pantallas consumen `OpenReader`/`SaveReadingProgress`, no Room ni SDKs de
+documentos. `textFrom` entrega unidades narrables reales para la futura Fase C.
+
+- **EPUB:** Readium abre el archivo privado, interpreta reading order/TOC y
+  extrae texto con su ContentService. Compose lo presenta en modo texto refluido;
+  no se implementa EpubNavigatorFragment ni fidelidad visual de CSS, imágenes,
+  tablas o scripts. Las secciones son los recursos del spine; el TOC aporta sus
+  títulos, con fallback de numeración si no existe. Se conserva un recurso de
+  texto en memoria, hasta 2 millones de caracteres; la consulta del final del
+  recurso anterior puede mantener temporalmente ambos. No se extraen archivos
+  del ZIP al disco. El HttpClient rechaza solicitudes externas; no hay Internet.
+- **TXT:** escaneo incremental con la codificación importada, índice de offsets
+  UTF-16 y fragmentos de hasta 1600 caracteres, separados preferentemente por
+  espacios sin dividir pares surrogate. Cada 20 fragmentos forma una sección.
+  La navegación abre un stream, salta hasta el offset y lee solo su fragmento;
+  no se conserva todo el libro ni se escribe un índice persistente. En textos
+  muy largos el salto es lineal; medir en teléfono antes de optimizar.
+- **PDF:** `PdfRenderer` genera una imagen de hasta 1080×1440 en memoria.
+  **PDFBox Android 2.0.27.0** extrae el texto de cada página mediante un Writer
+  limitado a 2 millones de caracteres. Scratch de PDFBox solo en RAM, con límite
+  de 32 MiB; no se generan temporales persistentes. Ese límite no representa
+  un límite total del heap del proceso. La familia transitiva Bouncy Castle se
+  actualiza de 1.72 a **1.87**. Un fallo de render no convierte la extracción en
+  inexistente; la UI ofrece Ver texto. Una página sin texto informa de posible
+  escaneo y OCR fuera de alcance, incluso en PDFs mixtos. No se afirma orden
+  semántico perfecto en columnas/tablas ni reconocimiento de imágenes.
+
+Las sesiones y los streams se cierran al abandonar el lector o limpiar su
+ViewModel. Un mutex evita cerrar mientras se extrae una página; la cancelación
+se propaga y la reapertura espera el cierre anterior. Se reutilizan las cachés
+de build y un solo directorio de reportes, sin copiar APKs por cada prueba.
+Licencias/notices de las incorporaciones en `third-party.md` y assets del APK.
+
+## ADR-010 — Ubicaciones persistentes y migración no destructiva
+
+Room pasa de v1 a **v2** mediante `MIGRATION_1_2`: añade `reading_progress`
+con FK al libro y cascade únicamente al eliminar su registro. La tabla `books`
+permanece intacta. Ambos esquemas están versionados y la prueba de migración
+reconstruye el v1 exportado (incluidos índices), migra, guarda y vuelve a abrir.
+La ausencia de migración de otra versión sigue fallando sin borrar datos.
+
+El codec tiene versión y distingue TXT por carácter global, PDF por página y
+carácter extraído y EPUB por locator Readium JSON. El locator EPUB conserva el
+href de recurso y una extensión `lectorTextOffset` sobre el texto normalizado
+de Readium, no un supuesto número de página. Esa extensión depende de la
+extracción de Readium 3.1.2: antes de actualizarla se deben probar ubicaciones
+guardadas; no es una garantía de interoperabilidad con otros lectores.
+
+Cada navegación confirma el inicio del fragmento en Room antes de mostrarlo;
+el desplazamiento dentro de ese fragmento no se persiste. Una detención durante
+la transición puede restaurar el fragmento solicitado que aún estaba cargando.
+Si no se puede guardar, la lectura continúa con aviso y reintento explícitos.
+Una ubicación corrupta/no compatible no se reemplaza silenciosamente con cero:
+se informa del error y, si la sesión abrió, el usuario puede elegir otra sección.
+Se rechazan escrituras a libros ausentes/no READY y updates anteriores a la
+fecha ya guardada. La pestaña Lector elige el libro READY de lectura más reciente.
