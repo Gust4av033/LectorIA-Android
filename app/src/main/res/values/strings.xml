@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="es">
     <string name="app_name">Lector IA</string>
     <string name="brand_tagline">Cada historia, a tu ritmo</string>
     <string name="library">Biblioteca</string>
@@ -10,10 +10,8 @@
     <string name="library_headline">Un espacio para\ntus historias.</string>
     <string name="library_intro">Tus libros, tu tiempo. Un nuevo capítulo empieza aquí.</string>
     <string name="library_empty">Tu primera historia\nestá por llegar</string>
-    <string name="library_empty_description">Todavía no hay libros. Pronto podrás importar tus documentos y tenerlos siempre a mano.</string>
-    <string name="import_pending">Importación pendiente de desarrollo</string>
+    <string name="library_empty_description">Importá tu primer documento. Guardaremos una copia privada para que permanezca en tu biblioteca.</string>
     <string name="privacy_title">Un espacio personal</string>
-    <string name="privacy_description">Esta versión no envía documentos ni texto a servicios externos.</string>
     <string name="coming_soon">Pendiente de desarrollo</string>
     <string name="reader_headline">Sumérgete en\ncada página.</string>
     <string name="reader_pending">El lector aún no está disponible. La apertura de EPUB, PDF y TXT y el guardado de tu posición se incorporarán en una próxima etapa.</string>
@@ -21,4 +19,60 @@
     <string name="player_pending">La narración y la reproducción de audio aún no están disponibles. Primero se integrará la voz local; las voces IA serán opcionales y requerirán tu consentimiento.</string>
     <string name="settings_headline">A tu manera.\nA tu ritmo.</string>
     <string name="settings_pending">Los ajustes aún no están disponibles. Aquí podrás configurar tus preferencias de lectura y las voces locales cuando estén integradas. No hay servicios IA conectados.</string>
+    <string name="library_filled_headline">Tus historias,\nsiempre cerca.</string>
+    <string name="import_book">Importar libro</string>
+    <string name="import_formats">EPUB, PDF y TXT · hasta 64 MB por documento</string>
+    <string name="loading_library">Cargando biblioteca…</string>
+    <string name="import_working">Guardando cambios y validando archivos…</string>
+    <string name="delete_working">Eliminando la copia privada…</string>
+    <string name="private_library">Los documentos importados se guardan en este dispositivo. El original que seleccionás permanece intacto.</string>
+    <string name="search_books">Buscar título o autor</string>
+    <string name="no_results">No hay libros que coincidan con la búsqueda.</string>
+    <string name="order_recent">Más recientes</string>
+    <string name="order_title">Título (A–Z)</string>
+    <string name="close">Cerrar</string>
+    <string name="retry">Reintentar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete_book">Eliminar libro</string>
+    <string name="delete_confirm">Eliminar</string>
+    <string name="discard_import">Descartar importación</string>
+    <string name="delete_confirmation">Se eliminará este libro y su copia privada de Lector IA. El archivo original que seleccionaste no se modificará.</string>
+    <string name="discard_confirmation">Se eliminarán los archivos privados de esta importación fallida. Los demás libros y el archivo original no se modificarán.</string>
+    <string name="import_success">Libro guardado en tu biblioteca.</string>
+    <string name="import_duplicate">Este documento ya está en tu biblioteca. No se creó otra copia.</string>
+    <string name="delete_success">Se completó la eliminación.</string>
+    <string name="book_author">Autor: %1$s</string>
+    <string name="book_format">Formato: %1$s</string>
+    <string name="book_size">Tamaño: %1$s</string>
+    <string name="book_encoding">Codificación: %1$s</string>
+    <string name="book_date">Importado: %1$s</string>
+    <string name="book_saved">Copia privada disponible en este dispositivo.</string>
+    <string name="book_unavailable">Archivo privado no disponible</string>
+    <string name="book_missing_detail">El archivo privado falta o no coincide con el registro. Conservamos los datos del libro; no se sobrescribió ninguna copia.</string>
+    <string name="book_reader_pending">La lectura de páginas y la narración estarán disponibles en las siguientes etapas.</string>
+    <string name="error_access">No se pudo acceder al documento. Volvé a seleccionarlo y comprobá el acceso desde el selector de archivos.</string>
+    <string name="error_empty">El documento está vacío o no contiene texto legible.</string>
+    <string name="error_size">El documento supera los límites de importación: 64 MB por archivo y límites de expansión para EPUB.</string>
+    <string name="error_format">Este formato no está admitido. Seleccioná un EPUB, PDF o TXT.</string>
+    <string name="error_mismatch">La extensión o el tipo declarado no coincide con el contenido del documento.</string>
+    <string name="error_invalid">El documento está dañado, incompleto o tiene una estructura no compatible.</string>
+    <string name="error_protected">El documento está protegido o requiere una contraseña. Esta versión admite documentos sin DRM ni contraseña.</string>
+    <string name="error_encoding">No se pudo reconocer el texto. Usá TXT en UTF-8, UTF-16 con BOM o Windows-1252.</string>
+    <string name="error_storage">No se pudieron guardar o recuperar los datos. Comprobá el espacio disponible y reintentá.</string>
+    <string name="error_interrupted">La importación se interrumpió. Podés descartar sus archivos temporales y volver a seleccionar el documento.</string>
+    <plurals name="book_count">
+        <item quantity="one">%d libro</item>
+        <item quantity="many">%d libros</item>
+        <item quantity="other">%d libros</item>
+    </plurals>
+    <plurals name="book_filtered_count">
+        <item quantity="one">%1$d de %2$d libro</item>
+        <item quantity="many">%1$d de %2$d libros</item>
+        <item quantity="other">%1$d de %2$d libros</item>
+    </plurals>
+    <plurals name="page_count">
+        <item quantity="one">%d página</item>
+        <item quantity="many">%d páginas</item>
+        <item quantity="other">%d páginas</item>
+    </plurals>
 </resources>

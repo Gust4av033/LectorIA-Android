@@ -2,11 +2,9 @@ package com.lectoria.app.presentation
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -28,11 +26,14 @@ class NavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun `starts with an honest empty library and no import action`() {
+    fun `starts with an empty persistent library and an enabled import action`() {
+        compose.waitUntil(15_000) {
+            runCatching { compose.onNodeWithTag("import_book").assertIsEnabled() }.isSuccess
+        }
         compose.onNodeWithTag("screen_library").assertIsDisplayed()
         compose.onNodeWithTag("nav_library").assertIsSelected()
         compose.onNodeWithText("Tu primera historia\nestá por llegar").assertExists()
-        compose.onAllNodes(hasClickAction() and hasText("Importar", substring = true)).assertCountEquals(0)
+        compose.onNodeWithTag("import_book").assertIsEnabled()
         val output = File("build/reports/screenshots/library.png")
         checkNotNull(output.parentFile).mkdirs()
         // Draw the native Robolectric view directly; PixelCopy's redraw callback
