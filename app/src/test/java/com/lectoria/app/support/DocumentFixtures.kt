@@ -16,6 +16,7 @@ object DocumentFixtures {
         extra: Map<String, ByteArray> = emptyMap(),
         opfOverride: String? = null,
         cover: ByteArray? = null,
+        additionalChapter: String? = null,
     ): ByteArray {
         val opf = opfOverride ?: """<?xml version="1.0" encoding="UTF-8"?>
             <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">
@@ -25,7 +26,8 @@ object DocumentFixtures {
               </metadata>
               <manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/>
                 ${if (cover != null) """<item id="cover" href="cover.png" media-type="image/png" properties="cover-image"/>""" else ""}
-              </manifest><spine><itemref idref="chapter"/></spine>
+                ${if (additionalChapter != null) """<item id="chapter2" href="chapter2.xhtml" media-type="application/xhtml+xml"/>""" else ""}
+              </manifest><spine><itemref idref="chapter"/>${if (additionalChapter != null) """<itemref idref="chapter2"/>""" else ""}</spine>
             </package>""".trimIndent()
         val entries = linkedMapOf(
             "mimetype" to "application/epub+zip".toByteArray(),
@@ -35,6 +37,7 @@ object DocumentFixtures {
         )
         entries["OEBPS/nav.xhtml"] = """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Índice</title></head><body><nav epub:type="toc"><ol><li><a href="chapter.xhtml">Prueba</a></li></ol></nav></body></html>""".toByteArray()
         if (cover != null) entries["OEBPS/cover.png"] = cover
+        if (additionalChapter != null) entries["OEBPS/chapter2.xhtml"] = additionalChapter.toByteArray()
         entries.putAll(extra)
         return zip(entries)
     }
@@ -56,8 +59,8 @@ object DocumentFixtures {
         }
     }.toByteArray()
 
-    fun pdf(): ByteArray {
-        val stream = "BT /F1 18 Tf 40 100 Td (Texto sintetico) Tj ET\n"
+    fun pdf(textual: Boolean = true): ByteArray {
+        val stream = if (textual) "BT /F1 18 Tf 40 100 Td (Texto sintetico) Tj ET\n" else "40 40 120 80 re f\n"
         val objects = listOf(
             "<< /Type /Catalog /Pages 2 0 R >>",
             "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",

@@ -8,8 +8,8 @@ sealed interface ReadingLocator {
         init { require(locatorJson.isNotBlank()) }
     }
 
-    data class Pdf(val pageIndex: Int) : ReadingLocator {
-        init { require(pageIndex >= 0) }
+    data class Pdf(val pageIndex: Int, val characterOffset: Int = 0) : ReadingLocator {
+        init { require(pageIndex >= 0 && characterOffset >= 0) }
     }
 
     data class Text(val characterOffset: Long) : ReadingLocator {
