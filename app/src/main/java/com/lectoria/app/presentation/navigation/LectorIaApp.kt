@@ -17,8 +17,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,8 +24,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lectoria.app.R
 import com.lectoria.app.core.designsystem.Midnight
-import com.lectoria.app.presentation.library.LibraryViewModel
-import com.lectoria.app.presentation.screens.LibraryScreen
+import com.lectoria.app.presentation.library.LibraryRoute
 import com.lectoria.app.presentation.screens.PendingScreen
 
 @Composable
@@ -73,9 +70,7 @@ fun LectorIaApp() {
         ) {
             NavHost(navController = navController, startDestination = Destination.Library.route) {
                 composable(Destination.Library.route) {
-                    val viewModel: LibraryViewModel = hiltViewModel()
-                    val state by viewModel.state.collectAsStateWithLifecycle()
-                    LibraryScreen(state)
+                    LibraryRoute()
                 }
                 composable(Destination.Reader.route) {
                     PendingScreen(

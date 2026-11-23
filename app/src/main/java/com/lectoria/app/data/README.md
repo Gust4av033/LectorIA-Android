@@ -1,6 +1,11 @@
 # Adaptadores de datos
 
-Reservado para Room, DataStore y archivos privados en Fase A. Los contratos están en
-`domain/repository`; no hay repositorios en memoria ni libros simulados en Fase 0.
-La UI no consulta almacenamiento ni solicita permisos. La importación deberá usar
-estados recuperables: Room y filesystem no comparten una transacción atómica.
+Fase A implementa Room (`local/`), DataStore (`LibraryPreferences`) y archivos
+privados (`importing/`). `RoomBookRepository` cumple los contratos de dominio;
+la UI accede a casos de uso. `SafSourceReader` abre documentos seleccionados con
+permiso temporal de lectura; no solicita almacenamiento general ni conserva URI
+como requisito para volver a abrir una copia importada.
+
+El protocolo persistido distingue COPYING, VERIFIED, READY, UNAVAILABLE, FAILED y
+DELETING. Room y filesystem no comparten una transacción atómica. Ver ADR-006 y
+las pruebas de recuperación, deduplicación, reapertura y eliminación.

@@ -25,16 +25,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import com.lectoria.app.R
-import com.lectoria.app.core.designsystem.LectorIaTheme
 import com.lectoria.app.core.designsystem.Midnight
-import com.lectoria.app.presentation.library.LibraryUiState
 
 @Composable
-private fun BrandHeader() {
+internal fun BrandHeader() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Surface(shape = RoundedCornerShape(15.dp), color = Midnight.Container.copy(alpha = 0.45f)) {
             Icon(
@@ -51,80 +47,6 @@ private fun BrandHeader() {
                 style = MaterialTheme.typography.bodySmall,
                 color = Midnight.MutedText,
             )
-        }
-    }
-}
-
-@Composable
-fun LibraryScreen(state: LibraryUiState) {
-    LazyColumn(
-        modifier = Modifier.testTag("screen_library"),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
-        item { BrandHeader() }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Eyebrow(R.string.your_library)
-                Text(stringResource(R.string.library_headline), style = MaterialTheme.typography.headlineLarge)
-                Text(
-                    stringResource(R.string.library_intro),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Midnight.MutedText,
-                )
-            }
-        }
-        item {
-            GlassCard {
-                Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                    IconBadge(R.drawable.ic_library)
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(R.string.library_empty), style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            stringResource(R.string.library_empty_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Midnight.MutedText,
-                        )
-                    }
-                    if (!state.importAvailable) {
-                        StatusLabel(R.string.import_pending)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("EPUB", "PDF", "TXT").forEach { format ->
-                            Surface(shape = RoundedCornerShape(8.dp), color = Midnight.Background.copy(alpha = 0.5f)) {
-                                Text(
-                                    format,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Midnight.MutedText,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(
-                    painterResource(R.drawable.ic_device),
-                    contentDescription = null,
-                    tint = Midnight.MutedText,
-                    modifier = Modifier.size(20.dp),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        stringResource(R.string.privacy_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.privacy_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Midnight.MutedText,
-                    )
-                }
-            }
         }
     }
 }
@@ -166,7 +88,7 @@ fun PendingScreen(
 }
 
 @Composable
-private fun GlassCard(content: @Composable () -> Unit) {
+internal fun GlassCard(content: @Composable () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -182,12 +104,12 @@ private fun GlassCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Eyebrow(@StringRes text: Int) {
+internal fun Eyebrow(@StringRes text: Int) {
     Text(stringResource(text), style = MaterialTheme.typography.labelSmall, color = Midnight.Highlight)
 }
 
 @Composable
-private fun StatusLabel(@StringRes text: Int) {
+internal fun StatusLabel(@StringRes text: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.size(6.dp).background(Midnight.Highlight, CircleShape))
         Text(stringResource(text), style = MaterialTheme.typography.labelMedium, color = Midnight.Highlight)
@@ -195,7 +117,7 @@ private fun StatusLabel(@StringRes text: Int) {
 }
 
 @Composable
-private fun IconBadge(@DrawableRes icon: Int) {
+internal fun IconBadge(@DrawableRes icon: Int) {
     Surface(shape = RoundedCornerShape(20.dp), color = Midnight.Container.copy(alpha = 0.25f)) {
         Icon(
             painterResource(icon),
@@ -204,10 +126,4 @@ private fun IconBadge(@DrawableRes icon: Int) {
             tint = Midnight.Highlight,
         )
     }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF040A1C)
-@Composable
-private fun LibraryPreview() {
-    LectorIaTheme { LibraryScreen(LibraryUiState()) }
 }

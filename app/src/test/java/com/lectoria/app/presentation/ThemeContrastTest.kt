@@ -9,6 +9,7 @@ import org.junit.Test
 class ThemeContrastTest {
     @Test
     fun `normal text and status colors meet WCAG AA on reading surfaces`() {
+        assertTrue("Filled action text must reach 4.5 to 1", contrast(Midnight.Text, Midnight.Container) >= 4.5f)
         listOf(Midnight.Background, Midnight.Surface).forEach { surface ->
             listOf(Midnight.Text, Midnight.MutedText, Midnight.Highlight).forEach { text ->
                 assertTrue("Text $text on $surface must reach 4.5 to 1", contrast(text, surface) >= 4.5f)

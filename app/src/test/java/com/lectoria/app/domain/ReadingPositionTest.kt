@@ -39,9 +39,10 @@ class ReadingPositionTest {
     fun `verified book requires identity a content hash and local file`() {
         assertThrows(IllegalArgumentException::class.java) { BookId(" ") }
         val book = Book(BookId("test-book"), "Texto de prueba", null, BookFormat.TXT,
-            "a".repeat(64), "/private/test.txt", Instant.EPOCH)
+            "a".repeat(64), "/private/test.txt", Instant.EPOCH, sizeBytes = 42)
         assertThrows(IllegalArgumentException::class.java) { book.copy(contentHash = "partial") }
         assertThrows(IllegalArgumentException::class.java) { book.copy(localPath = "") }
         assertThrows(IllegalArgumentException::class.java) { book.copy(title = " ") }
+        assertThrows(IllegalArgumentException::class.java) { book.copy(sizeBytes = 0) }
     }
 }
