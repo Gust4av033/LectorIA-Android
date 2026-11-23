@@ -1,4 +1,4 @@
-# Requisitos y evidencia — Fases 0 y A
+# Requisitos y evidencia — Fases 0, A y B
 
 Fuente: `MASTER_PLAN.md` y solicitud de Fase 0 del 23/11/2026.
 `IMPLEMENTED` describe código; los resultados de ejecución están en `testing.md`.
@@ -48,3 +48,28 @@ conecta sus contratos con almacenamiento real. Resultados finales y límites en
 El usuario confirmó el 23/11/2026 el Sync y arranque de Fase 0 desde Android Studio
 en su celular. Se registra como **USER_REPORTED**; no acredita ejecución de pruebas
 instrumentadas, Bluetooth o de las nuevas importaciones de Fase A.
+
+En la continuación del 23/11/2026 el usuario confirmó que ya puede **importar un
+libro EPUB**. Estado **USER_REPORTED** para ese flujo de Fase A; no especificó
+modelo ni ejecución de la suite instrumentada.
+
+## Fase B — Lectura, extracción y restauración
+
+| Requisito | Implementación | Evidencia |
+|---|---|---|
+| Abrir desde la biblioteca | Leer libro → ReaderRoute/ViewModel, casos de uso reales | LibraryFlowTest importa TXT, abre y navega |
+| EPUB mediante Readium, con/sin TOC | shared/streamer 3.1.2, reading order, títulos TOC y modo texto Compose | DocumentReaderTest: Unicode, sin TOC, varios recursos, ida/vuelta y reapertura |
+| TXT largo y codificaciones importadas | Índice incremental, UTF-16 offsets, lectura acotada | Reconstrucción completa sin pérdida/duplicación, emoji y UTF-16LE |
+| PDF visual + extracción real | PdfRenderer separado de PDFBox Android | Texto real y ausencia de texto verificados en JVM; PDF mixto/render instrumentados pendientes |
+| Tratamiento explícito de PDF sin texto | Aviso por página, sin OCR simulado | PDF sin texto no entrega fragmentos narrables; imagen escaneada en PdfReaderTest |
+| Secciones, tamaño de letra y navegación | Compose real, texto seleccionable, anterior/siguiente e índice | Flujos UI reales y captura nativa |
+| Progreso por libro y último libro leído | RoomReadingProgressRepository, codec versionado | Roundtrip TXT/PDF/EPUB, reapertura, cascade acotado, updates antiguos rechazados |
+| Conservar biblioteca al actualizar | Migración Room 1→2, sin fallback destructivo | Migración desde esquema v1 exportado, metadatos conservados y progreso persistente |
+| No borrar avance ante locator inválido | Error y selección explícita de sección | Test UI verifica valor antes/después de recuperar |
+| No crecer en copias de documentos | Sesiones/índices en memoria, sin EPUB extraído o PDF scratch en disco | Test TXT comprueba ausencia de archivos extra; pasos físicos pendientes |
+| Integridad al abrir | Comparación SHA-256 completa | Rechaza modificación de igual longitud sin sobrescribir archivo |
+| Voz local/narración | Contratos previos, unidades textuales disponibles | Fase C, PLANNED |
+
+Estado exacto de ejecución y límites de formato: `testing-phase-b.md` y
+`architecture.md` ADR-009/010. La implementación visual PDF y el reinicio real
+en teléfono no se declaran DONE a partir de Robolectric.

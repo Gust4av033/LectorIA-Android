@@ -1,5 +1,9 @@
 # Lector IA — Kit de inicio
 
+> **Estado actual, Fase B (0.3.0):** lector EPUB/TXT en modo texto, PDF visual y
+> extracción textual, secciones y avance persistente por libro. Instrucciones
+> actuales al final; las secciones de Fase 0/A se conservan como historial.
+
 > **Actualización de implementación (23/11/2026):** el texto de arranque de abajo
 > se conserva como contexto histórico. El repositorio ya contiene la base Android
 > de Fase 0. Consulta las instrucciones actuales y la evidencia al final de este archivo.
@@ -125,3 +129,33 @@ La base Room comienza en versión 1, con esquema exportado en `app/schemas` y si
 recreación destructiva automática. Las importaciones fallidas se muestran para
 descartarlas con confirmación; las verificadas interrumpidas se intentan recuperar
 al cargar la biblioteca. Los originales válidos no se barren automáticamente.
+
+## Lectura y avance — Fase B
+
+Rama **`feature/fase-b-lector`**, basada en Fase A mientras su PR siga abierto.
+En Android Studio: **Git → Fetch**, selector de ramas → **Remote →
+origin/feature/fase-b-lector → Checkout**; después Sync y **app → celular → Run ▶**.
+Conserva JDK 21 y tu Gradle user home. Actualiza la instalación existente con la
+misma firma debug de tu equipo para conservar datos; no desinstales la app.
+
+Toca un libro y **Leer libro**. EPUB/TXT ofrecen texto seleccionable, A−/A+,
+fragmento anterior/siguiente y **Secciones**. EPUB utiliza Readium 3.1.2 para
+estructura, índice y extracción; este modo prioriza lectura textual y no reproduce
+el diseño, imágenes, tablas complejas o interactividad del EPUB original.
+
+PDF muestra su página nativa; **Ver texto** permite consultar la extracción real
+de PDFBox Android. En la vista visual, anterior/siguiente cambian de página; en
+texto recorren fragmentos. Una página sin texto avisa que puede necesitar OCR,
+todavía fuera de alcance. No se genera texto ficticio a partir de una imagen.
+
+El avance se guarda por libro al cambiar de fragmento/sección. Al volver a abrirlo,
+o tocar la pestaña Lector, se restaura la ubicación. La granularidad es el inicio
+del fragmento (hasta 1600 caracteres), no el píxel de desplazamiento. PDF guarda
+página y carácter; EPUB guarda recurso y offset en un locator Readium. La migración
+Room 1→2 conserva la biblioteca y añade progreso, sin recrear las tablas previas.
+El lector verifica SHA-256 al abrir. No descarga ni extrae copias de capítulos al
+disco: índice TXT y página/sección actual se mantienen en memoria.
+
+Pruebas y pasos en teléfono: [testing-phase-b.md](docs/testing-phase-b.md).
+Licencias incorporadas: [third-party.md](docs/third-party.md). Narración/TTS y el
+reproductor permanecen para Fase C.
