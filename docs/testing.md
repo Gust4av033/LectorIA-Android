@@ -127,3 +127,20 @@ una ejecución física. El wrapper Windows se conserva con CRLF mediante
 visual en Samsung Galaxy S22+ Android 16, TalkBack, gestos/insets, tamaño de fuente
 grande y modo offline en dispositivo. El smoke test no se declara ejecutado por
 haberlo compilado. Tampoco se hicieron pruebas de libros, PDF, TTS, audio o nube.
+
+## CI en GitHub
+
+El workflow `Android` ejecuta los mismos cuatro objetivos Gradle con JDK 21 y sube
+los reportes. Usa el SDK/Command-line Tools preinstalado del runner Ubuntu e instala
+solo Platform-Tools, Platform 36 y Build-Tools 36.0.0. Las acciones v5 están fijadas
+por SHA a tags verificados y usan el runtime actual de GitHub.
+
+La primera ejecución del PR falló **antes del build** porque
+`android-actions/setup-android@v3` intentaba instalar el paquete retirado `tools`:
+`Warning: Failed to find package 'tools'`. Se eliminó ese paso redundante y se usa
+`$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager` directamente. No se modificaron
+los resultados locales ni se omitieron tareas de CI para resolverlo.
+
+Los resultados remotos están en el
+[PR #1](https://github.com/Gust4av033/LectorIA-Android/pull/1) y en
+[GitHub Actions](https://github.com/Gust4av033/LectorIA-Android/actions).
