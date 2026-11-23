@@ -56,7 +56,7 @@ class NavigationTest {
             compose.onNodeWithTag("nav_$route").performClick()
             compose.onNodeWithTag("screen_$route").assertIsDisplayed()
             compose.onNodeWithTag("nav_$route").assertIsSelected()
-            if (route != "library") {
+            if (route == "player" || route == "settings") {
                 compose.onNodeWithText("Pendiente de desarrollo").assertIsDisplayed()
             }
         }

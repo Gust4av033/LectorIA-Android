@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -26,6 +28,7 @@ import com.lectoria.app.R
 import com.lectoria.app.core.designsystem.Midnight
 import com.lectoria.app.presentation.library.LibraryRoute
 import com.lectoria.app.presentation.screens.PendingScreen
+import com.lectoria.app.presentation.reader.ReaderRoute
 
 @Composable
 fun LectorIaApp() {
@@ -39,7 +42,7 @@ fun LectorIaApp() {
                 Destination.entries.forEach { destination ->
                     NavigationBarItem(
                         modifier = Modifier.testTag("nav_${destination.route}"),
-                        selected = backStack?.destination?.route == destination.route,
+                        selected = backStack?.destination?.route?.substringBefore('?') == destination.route,
                         onClick = {
                             navController.navigate(destination.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -70,16 +73,10 @@ fun LectorIaApp() {
         ) {
             NavHost(navController = navController, startDestination = Destination.Library.route) {
                 composable(Destination.Library.route) {
-                    LibraryRoute()
+                    LibraryRoute(onOpenBook = { id -> navController.navigate("reader?bookId=${android.net.Uri.encode(id)}") { launchSingleTop = true } })
                 }
-                composable(Destination.Reader.route) {
-                    PendingScreen(
-                        title = R.string.reader,
-                        headline = R.string.reader_headline,
-                        description = R.string.reader_pending,
-                        icon = R.drawable.ic_reader,
-                        tag = "screen_reader",
-                    )
+                composable("reader?bookId={bookId}", arguments = listOf(navArgument("bookId") { type = NavType.StringType; nullable = true; defaultValue = null })) {
+                    ReaderRoute(onLibrary = { navController.navigate(Destination.Library.route) { popUpTo(Destination.Library.route); launchSingleTop = true } })
                 }
                 composable(Destination.Player.route) {
                     PendingScreen(

@@ -13,8 +13,6 @@
     <string name="library_empty_description">Importá tu primer documento. Guardaremos una copia privada para que permanezca en tu biblioteca.</string>
     <string name="privacy_title">Un espacio personal</string>
     <string name="coming_soon">Pendiente de desarrollo</string>
-    <string name="reader_headline">Sumérgete en\ncada página.</string>
-    <string name="reader_pending">El lector aún no está disponible. La apertura de EPUB, PDF y TXT y el guardado de tu posición se incorporarán en una próxima etapa.</string>
     <string name="player_headline">Dale voz a\ntus historias.</string>
     <string name="player_pending">La narración y la reproducción de audio aún no están disponibles. Primero se integrará la voz local; las voces IA serán opcionales y requerirán tu consentimiento.</string>
     <string name="settings_headline">A tu manera.\nA tu ritmo.</string>
@@ -49,7 +47,6 @@
     <string name="book_saved">Copia privada disponible en este dispositivo.</string>
     <string name="book_unavailable">Archivo privado no disponible</string>
     <string name="book_missing_detail">El archivo privado falta o no coincide con el registro. Conservamos los datos del libro; no se sobrescribió ninguna copia.</string>
-    <string name="book_reader_pending">La lectura de páginas y la narración estarán disponibles en las siguientes etapas.</string>
     <string name="error_access">No se pudo acceder al documento. Volvé a seleccionarlo y comprobá el acceso desde el selector de archivos.</string>
     <string name="error_empty">El documento está vacío o no contiene texto legible.</string>
     <string name="error_size">El documento supera los límites de importación: 64 MB por archivo y límites de expansión para EPUB.</string>
@@ -75,4 +72,28 @@
         <item quantity="many">%d páginas</item>
         <item quantity="other">%d páginas</item>
     </plurals>
+    <string name="reader_open">Leer libro</string>
+    <string name="reader_sections">Secciones</string>
+    <string name="reader_loading">Abriendo lectura…</string>
+    <string name="reader_empty">Abre un libro de tu biblioteca para comenzar. Aquí podrás retomar tu última lectura.</string>
+    <string name="reader_choose">Elegir un libro</string>
+    <string name="reader_error">No se pudo abrir la lectura. El libro y su avance se conservan. Intenta de nuevo desde la biblioteca.</string>
+    <string name="reader_location_error">No se pudo recuperar esta ubicación. Tu avance guardado se conserva; puedes elegir otra sección.</string>
+    <string name="reader_section_large">Esta sección supera el límite de texto del lector. Puedes elegir otra sección.</string>
+    <string name="reader_save_error">No se pudo guardar el avance.</string>
+    <string name="reader_show_page">Ver página</string>
+    <string name="reader_show_text">Ver texto</string>
+    <string name="reader_text_mode">Lectura de texto</string>
+    <string name="reader_no_pdf_text">Esta página no tiene texto extraíble. Puede ser una imagen escaneada; necesita OCR, que aún no está disponible. Puedes seguir viendo el PDF.</string>
+    <string name="reader_extraction_denied">Este PDF no permite extraer texto. Puedes consultar su página.</string>
+    <string name="reader_no_section_text">Esta sección no contiene texto extraíble. Continúa a la siguiente sección.</string>
+    <string name="reader_image_error">No se pudo dibujar esta página. Si tiene texto, puedes leerlo con «Ver texto».</string>
+    <string name="reader_pdf_image">Página %1$d del PDF</string>
+    <string name="reader_page_number">Página %1$d de %2$d</string>
+    <string name="reader_section_number">Sección %1$d de %2$d</string>
+    <string name="reader_previous">Anterior</string>
+    <string name="reader_next">Siguiente</string>
+    <string name="reader_smaller">Reducir tamaño del texto</string>
+    <string name="reader_larger">Aumentar tamaño del texto</string>
+    <string name="reader_fragment_number">Fragmento %1$d de %2$d</string>
 </resources>
