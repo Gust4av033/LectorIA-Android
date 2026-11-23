@@ -61,7 +61,8 @@ class DocumentReaderTest {
     }
 
     @Test fun `Readium extracts EPUB text and restores its resource locator`() = runBlocking {
-        val book = book(BookFormat.EPUB, DocumentFixtures.epub())
+        val navigation = """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Índice</title></head><body><nav epub:type="toc"><ol><li><a href="chapter.xhtml">Prueba</a><ol><li><a href="chapter.xhtml#detalle">Detalle interno</a></li></ol></li></ol></nav></body></html>"""
+        val book = book(BookFormat.EPUB, DocumentFixtures.epub(extra = mapOf("OEBPS/nav.xhtml" to navigation.toByteArray())))
         val locator = reader().open(book).getOrThrow().use { session ->
             assertTrue(session.canExtractText)
             val sections = session.sections()

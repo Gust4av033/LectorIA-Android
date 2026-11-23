@@ -38,7 +38,9 @@ internal class EpubDocumentSession(private val publication: Publication) : Docum
     private fun flatten(links: List<Link>): List<Link> = links.flatMap { listOf(it) + flatten(it.children) }
 
     override suspend fun sections(): List<DocumentSection> {
-        val titles = flatten(publication.tableOfContents).associate { it.href.toString().substringBefore('#') to it.title }
+        val titles = flatten(publication.tableOfContents)
+            .distinctBy { it.href.toString().substringBefore('#') }
+            .associate { it.href.toString().substringBefore('#') to it.title }
         return links.mapIndexed { index, link ->
             DocumentSection(link.href.toString(), titles[link.href.toString().substringBefore('#')] ?: link.title, at(index, 0))
         }

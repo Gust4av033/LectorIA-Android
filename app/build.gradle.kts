@@ -64,9 +64,9 @@ dependencies {
     implementation(libs.pdfbox)
     // The PDFBox port declares Bouncy Castle 1.72; use the current compatible maintained line.
     constraints {
-        implementation("org.bouncycastle:bcprov-jdk15to18:${libs.versions.bouncycastle.get()}")
-        implementation("org.bouncycastle:bcpkix-jdk15to18:${libs.versions.bouncycastle.get()}")
-        implementation("org.bouncycastle:bcutil-jdk15to18:${libs.versions.bouncycastle.get()}")
+        implementation(libs.bcprov)
+        implementation(libs.bcpkix)
+        implementation(libs.bcutil)
     }
 
     testImplementation(libs.junit)
