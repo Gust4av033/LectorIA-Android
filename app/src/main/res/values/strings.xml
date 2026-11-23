@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lector IA</string>
+    <string name="brand_tagline">Cada historia, a tu ritmo</string>
+    <string name="library">Biblioteca</string>
+    <string name="reader">Lector</string>
+    <string name="player">Reproductor</string>
+    <string name="settings">Ajustes</string>
+    <string name="your_library">TU BIBLIOTECA</string>
+    <string name="library_headline">Un espacio para\ntus historias.</string>
+    <string name="library_intro">Tus libros, tu tiempo. Un nuevo capítulo empieza aquí.</string>
+    <string name="library_empty">Tu primera historia\nestá por llegar</string>
+    <string name="library_empty_description">Todavía no hay libros. Pronto podrás importar tus documentos y tenerlos siempre a mano.</string>
+    <string name="import_pending">Importación pendiente de desarrollo</string>
+    <string name="privacy_title">Un espacio personal</string>
+    <string name="privacy_description">Esta versión no envía documentos ni texto a servicios externos.</string>
+    <string name="coming_soon">Pendiente de desarrollo</string>
+    <string name="reader_headline">Sumérgete en\ncada página.</string>
+    <string name="reader_pending">El lector aún no está disponible. La apertura de EPUB, PDF y TXT y el guardado de tu posición se incorporarán en una próxima etapa.</string>
+    <string name="player_headline">Dale voz a\ntus historias.</string>
+    <string name="player_pending">La narración y la reproducción de audio aún no están disponibles. Primero se integrará la voz local; las voces IA serán opcionales y requerirán tu consentimiento.</string>
+    <string name="settings_headline">A tu manera.\nA tu ritmo.</string>
+    <string name="settings_pending">Los ajustes aún no están disponibles. Aquí podrás configurar tus preferencias de lectura y las voces locales cuando estén integradas. No hay servicios IA conectados.</string>
+</resources>
