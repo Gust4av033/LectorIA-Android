@@ -17,8 +17,8 @@ android {
         applicationId = "com.lectoria.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -38,6 +38,7 @@ android {
 }
 
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -53,6 +54,9 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.room.runtime)
+    ksp(libs.room.compiler)
+    implementation(libs.datastore.preferences)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
