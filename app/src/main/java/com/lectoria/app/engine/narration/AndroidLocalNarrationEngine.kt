@@ -70,7 +70,7 @@ class AndroidLocalNarrationEngine internal constructor(
                     if (generation == platformGeneration && active?.id == id) {
                         partStarted = true
                         mutableEvents.tryEmit(NarrationEvent.Started(parentRequestId ?: id))
-                        mutableEvents.tryEmit(NarrationEvent.Progress(parentRequestId ?: id, active.chunk.start))
+                        mutableEvents.tryEmit(NarrationEvent.Progress(parentRequestId ?: id, active.chunk.start, active.chunk.end))
                     }
                 }
                 override fun done(id: String) = post { if (generation == platformGeneration) finish(id, null) }
@@ -84,7 +84,7 @@ class AndroidLocalNarrationEngine internal constructor(
                         partStarted = true
                         var safeStart = start
                         if (safeStart > 0 && Character.isLowSurrogate(active.chunk.text[safeStart])) safeStart--
-                        mutableEvents.tryEmit(NarrationEvent.Progress(parentRequestId ?: id, TextLocator(active.chunk.start.sectionId, active.chunk.start.characterOffset + safeStart)))
+                        mutableEvents.tryEmit(NarrationEvent.Progress(parentRequestId ?: id, TextLocator(active.chunk.start.sectionId, active.chunk.start.characterOffset + safeStart), TextLocator(active.chunk.start.sectionId, active.chunk.start.characterOffset + end)))
                     }
                 }
             }
@@ -130,11 +130,13 @@ class AndroidLocalNarrationEngine internal constructor(
         }
         parentRequestId = request.id
         var offset = 0
-        for ((index, part) in speechParts(request.chunk.text).withIndex()) {
+        for ((index, part) in deliveryParts(request.chunk.text, request.delivery).withIndex()) {
             val chunk = request.chunk.copy(text = part,
                 start = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset),
                 end = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset + part.length))
             val piece = request.copy(id = if (index == 0) request.id else "${request.id}:$index", chunk = chunk)
+            val prosody = speechProsody(part, request.rate, request.delivery)
+            if (!active.setPitch(prosody.pitch) || !active.setRate(prosody.rate)) return@withContext Result.failure(SpeechException(SpeechFailure.ENGINE))
             var result = speakPart(active, piece)
             if ((result.exceptionOrNull() as? SpeechException)?.engineCode == TextToSpeech.ERROR_SERVICE && !partStarted && !recovered) {
                 recovered = true
@@ -145,7 +147,8 @@ class AndroidLocalNarrationEngine internal constructor(
                     configure(selectedEngine)
                     active = checkNotNull(platform)
                     val error = applyOptions(active, request)
-                    result = if (error != null) Result.failure(error) else speakPart(active, piece.copy(id = "${piece.id}:retry"))
+                    result = if (error != null) Result.failure(error) else if (!active.setPitch(prosody.pitch) || !active.setRate(prosody.rate)) Result.failure(SpeechException(SpeechFailure.ENGINE))
+                        else speakPart(active, piece.copy(id = "${piece.id}:retry"))
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) { result = Result.failure(error) }
             }
@@ -155,6 +158,7 @@ class AndroidLocalNarrationEngine internal constructor(
                 return@withContext result
             }
             offset += part.length
+            if (offset < request.chunk.text.length && prosody.pauseMs > 0) delay(prosody.pauseMs)
         }
         mutableEvents.tryEmit(NarrationEvent.Completed(request.id))
         Result.success(Unit)

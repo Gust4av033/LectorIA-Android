@@ -76,7 +76,8 @@ class NarrationCoordinator(
                     val book = state.value.book ?: return@collect
                     val locator = runCatching { activeSession?.locateText(event.locator) }.getOrNull() ?: return@collect
                     val bookmark = mark(book.id, locator)
-                    mutableState.update { it.copy(locator = locator) }
+                    val end = event.end ?: event.locator.copy(characterOffset = event.locator.characterOffset + 1)
+                    mutableState.update { it.copy(locator = locator, spokenRange = SpokenRange(event.locator, end)) }
                     if (elapsedMs() - lastRangeSave >= 1000) {
                         lastRangeSave = elapsedMs()
                         scope.launch { save(bookmark) }
@@ -164,6 +165,7 @@ class NarrationCoordinator(
     }
 
     suspend fun setRate(rate: Float) = changeSettings { it.copy(rate = rate) }
+    suspend fun setDelivery(delivery: SpeechDelivery) = changeSettings { it.copy(delivery = delivery) }
 
     private suspend fun changeSettings(change: (SpeechSettings) -> SpeechSettings) {
         pause(PauseReason.SETTINGS)
@@ -196,7 +198,7 @@ class NarrationCoordinator(
                 pending = saved
                 mutableState.update { it.copy(book = book, locator = from, phase = SpeechPhase.PREPARING,
                     failure = null, engineErrorCode = null, testingVoice = false, speechConfirmed = false, reconnectingVoice = false,
-                    saveFailed = false, pauseReason = null, preview = "") }
+                    saveFailed = false, pauseReason = null, preview = "", spokenRange = null) }
                 playback = scope.launch { speakBook(operation, selected, from, saved?.completed == true) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { fail((error as? SpeechException)?.reason ?: SpeechFailure.DOCUMENT) }
@@ -241,7 +243,7 @@ class NarrationCoordinator(
                             sectionTitle = sections.getOrNull(page.sectionIndex)?.title, sectionCount = sections.size,
                             fragmentIndex = page.fragmentIndex, fragmentCount = page.fragmentCount, hasPrevious = page.previous != null,
                             hasNext = page.next != null, preview = text.take(500), failure = null) }
-                        val request = SpeechRequest(UUID.randomUUID().toString(), sliced, voice.id, settings.rate)
+                        val request = SpeechRequest(UUID.randomUUID().toString(), sliced, voice.id, settings.rate, settings.delivery)
                         requestId = request.id
                         engine.narrate(request).getOrThrow()
                         requestId = null
@@ -308,7 +310,7 @@ class NarrationCoordinator(
                     mutableState.update { it.copy(phase = SpeechPhase.PLAYING) }
                     val text = "Hola. Esta es la voz que leerá tu libro."
                     val request = SpeechRequest(UUID.randomUUID().toString(), TextChunk(text, TextLocator("voice-test", 0),
-                        TextLocator("voice-test", text.length.toLong())), voice.id, state.value.settings.rate)
+                        TextLocator("voice-test", text.length.toLong())), voice.id, state.value.settings.rate, state.value.settings.delivery)
                     requestId = request.id
                     engine.narrate(request).getOrThrow()
                     mutableState.update { it.copy(phase = if (it.book == null) SpeechPhase.IDLE else SpeechPhase.PAUSED, pauseReason = PauseReason.SETTINGS) }
@@ -356,7 +358,7 @@ class NarrationCoordinator(
                     }
                     val page = session.page(state.value.locator ?: session.sections().first().start)
                     target = if (forward) page.next else page.previous
-                    target?.let { mark(id, it); savePending(); mutableState.update { state -> state.copy(locator = it, phase = SpeechPhase.PAUSED, failure = null) } }
+                    target?.let { mark(id, it); savePending(); mutableState.update { state -> state.copy(locator = it, phase = SpeechPhase.PAUSED, failure = null, spokenRange = null) } }
                     if (forward && target == null) {
                         mark(id, page.locator, completed = true)
                         savePending()

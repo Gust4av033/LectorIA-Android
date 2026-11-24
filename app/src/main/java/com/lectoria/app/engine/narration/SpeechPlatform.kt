@@ -19,6 +19,7 @@ internal interface SpeechPlatform {
     fun voices(): List<SpeechVoice>
     fun selectVoice(id: String): Boolean
     fun setRate(rate: Float): Boolean
+    fun setPitch(pitch: Float): Boolean = true
     fun speak(text: String, id: String): Boolean
     fun stop()
     fun shutdown()
@@ -82,6 +83,7 @@ private class AndroidSpeechPlatform(context: Context, engine: String, initialize
     }
 
     override fun setRate(rate: Float) = tts.setSpeechRate(rate) == TextToSpeech.SUCCESS
+    override fun setPitch(pitch: Float) = tts.setPitch(pitch) == TextToSpeech.SUCCESS
     override fun speak(text: String, id: String): Boolean {
         // The selected Voice determines offline synthesis. Legacy feature flags can
         // conflict with named voices in vendor engines; do not override their mode.
