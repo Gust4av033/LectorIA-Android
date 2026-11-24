@@ -30,7 +30,7 @@ class ReadingProgressTest {
     private val name = "progress-${UUID.randomUUID()}.db"
     private var database: LibraryDatabase? = null
     private fun open(): LibraryDatabase = Room.databaseBuilder(context, LibraryDatabase::class.java, name)
-        .addMigrations(LibraryDatabase.MIGRATION_1_2).build().also { database = it }
+        .addMigrations(LibraryDatabase.MIGRATION_1_2, LibraryDatabase.MIGRATION_2_3).build().also { database = it }
     @After fun cleanup() { database?.close(); context.deleteDatabase(name) }
 
     @Test fun `v1 migration preserves books and enables persistent format specific progress`() = runBlocking {

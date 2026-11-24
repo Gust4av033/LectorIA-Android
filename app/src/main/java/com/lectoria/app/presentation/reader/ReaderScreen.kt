@@ -48,10 +48,12 @@ import com.lectoria.app.domain.document.ReaderFailure
 import com.lectoria.app.domain.model.BookFormat
 
 @Composable
-fun ReaderRoute(onLibrary: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
+fun ReaderRoute(onLibrary: () -> Unit, onListen: () -> Unit = {}, viewModel: ReaderViewModel = hiltViewModel()) {
     DisposableEffect(viewModel) { viewModel.reload(); onDispose { viewModel.release() } }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ReaderScreen(state, viewModel::go, viewModel::retry, viewModel::retrySave, onLibrary)
+    val player: com.lectoria.app.presentation.player.PlayerViewModel = hiltViewModel()
+    val listen = { state.book?.let { book -> state.page?.let { page -> player.client.listen(book.id, page.locator); onListen() } }; Unit }
+    ReaderScreen(state, viewModel::go, viewModel::retry, viewModel::retrySave, onLibrary, listen)
 }
 
 @Composable
@@ -61,6 +63,7 @@ private fun ReaderScreen(
     onReload: () -> Unit,
     onRetrySave: () -> Unit,
     onLibrary: () -> Unit,
+    onListen: () -> Unit,
 ) {
     var contents by remember { mutableStateOf(false) }
     var fontSize by rememberSaveable { mutableIntStateOf(20) }
@@ -128,6 +131,7 @@ private fun ReaderScreen(
                     Text(page.text.removePrefix("\uFEFF"), fontSize = fontSize.sp, lineHeight = (fontSize * 1.55f).sp, modifier = Modifier.testTag("reader_text"))
                 } else if (!isPdf) Text(stringResource(R.string.reader_no_section_text), color = Midnight.MutedText)
             }
+            if (page.chunk != null) LectorButton(onClick = onListen, enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("listen_book")) { Text("Escuchar desde aquí") }
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 LectorButton(onClick = { previous?.let(onGo) }, enabled = previous != null && !state.busy,
                     modifier = Modifier.testTag("reader_previous")) { Text(stringResource(R.string.reader_previous)) }

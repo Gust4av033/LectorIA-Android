@@ -1,6 +1,8 @@
 # Lector IA — Kit de inicio
 
-> **Estado actual, Fase B (0.3.0):** lector EPUB/TXT en modo texto, PDF visual y
+> **Actualización Fase C, 0.4.0:** voz local y reproductor en validación; pasos al final y en `docs/testing-phase-c.md`.
+
+> **Historial, Fase B (0.3.0):** lector EPUB/TXT en modo texto, PDF visual y
 > extracción textual, secciones y avance persistente por libro. Instrucciones
 > actuales al final; las secciones de Fase 0/A se conservan como historial.
 
@@ -159,3 +161,34 @@ disco: índice TXT y página/sección actual se mantienen en memoria.
 Pruebas y pasos en teléfono: [testing-phase-b.md](docs/testing-phase-b.md).
 Licencias incorporadas: [third-party.md](docs/third-party.md). Narración/TTS y el
 reproductor permanecen para Fase C.
+
+## Voz local — Fase C (0.4.0)
+
+Actualizar a `feature/fase-c-voz-local` desde las ramas remotas de Android Studio,
+sincronizar y Run conservando la instalación existente y JDK 21. Abrir el libro y
+**Escuchar desde aquí**. Reproductor/Ajustes permiten escoger motor, voz instalada
+sin red y velocidad. Si falta español, configurar/descargar voces desde Android y
+actualizar la lista. No se genera audio en disco ni se añade una API de pago.
+
+Pausa/reanudación, anterior/siguiente por fragmentos y controles multimedia están
+conectados al servicio de voz. El avance de escucha se guarda separado de lectura.
+Pasos de modo avión, pantalla apagada, Bluetooth y recuperación en
+[testing-phase-c.md](docs/testing-phase-c.md). Estas pruebas físicas siguen pendientes.
+
+### Actualización 0.4.1 del reproductor
+
+En la misma rama `feature/fase-c-voz-local`, hacer Pull/Update Project, Sync y Run
+sobre la instalación existente. **Probar voz** comprueba el motor sin leer el libro;
+**Escuchar/Pausar** es el botón central; **Parte anterior/siguiente** recorren texto.
+La selección de voz muestra idioma y país en un diálogo. El error de Android,
+cuando está disponible, muestra un motivo concreto para orientar la recuperación.
+Se conserva el libro y su avance; hace falta confirmar la voz en el teléfono.
+
+### Corrección de voz 0.4.2
+
+La voz se carga antes de encolar el habla, se recupera una vez un fallo de servicio
+antes del inicio y se ofrece **Reconectar voz** sin perder avance. La pantalla
+distingue conexión/espera de voz iniciada. Se prefiere la voz predeterminada de
+Android cuando sea española y offline. Actualizar con Pull, Sync y Run en la rama
+actual y probar la muestra antes del EPUB. **Copiar diagnóstico** excluye el libro.
+Validación local: 94 pruebas y build PASS; sonido real pendiente de repetir.

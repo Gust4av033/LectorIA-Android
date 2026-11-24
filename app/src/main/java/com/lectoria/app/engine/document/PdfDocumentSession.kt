@@ -82,7 +82,14 @@ internal class PdfDocumentSession(private val file: File) : DocumentSession {
         DocumentPage(ReadingLocator.Pdf(pdf.pageIndex, start), pdf.pageIndex, text, previous,
             if (chunkIndex + 1 < cachedStarts.size) ReadingLocator.Pdf(pdf.pageIndex, cachedStarts[chunkIndex + 1])
             else if (pdf.pageIndex + 1 < document.numberOfPages) ReadingLocator.Pdf(pdf.pageIndex + 1) else null,
-            text.takeIf { it.isNotBlank() }?.let { TextChunk(it, TextLocator("pdf_${pdf.pageIndex}", start.toLong()), TextLocator("pdf_${pdf.pageIndex}", end.toLong())) }, chunkIndex, cachedStarts.size)
+            text.takeIf { it.isNotBlank() }?.let { TextChunk(it, TextLocator("pdf_${pdf.pageIndex}", start.toLong()), TextLocator("pdf_${pdf.pageIndex}", end.toLong())) }, chunkIndex, cachedStarts.size, pdf.characterOffset - start)
+    }
+
+    override fun locateText(locator: TextLocator): ReadingLocator {
+        val index = locator.sectionId.removePrefix("pdf_").toIntOrNull()
+        require(locator.sectionId.startsWith("pdf_") && index != null && index in 0 until document.numberOfPages)
+        require(locator.characterOffset <= TextPagination.MAX_SECTION_CHARS)
+        return ReadingLocator.Pdf(index, locator.characterOffset.toInt())
     }
 
     private suspend fun previousPage(index: Int): ReadingLocator.Pdf {

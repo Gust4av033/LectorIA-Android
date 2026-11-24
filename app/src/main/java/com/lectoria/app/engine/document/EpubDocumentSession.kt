@@ -87,7 +87,13 @@ internal class EpubDocumentSession(private val publication: Publication) : Docum
         DocumentPage(at(index, start), index, text,
             if (chunkIndex > 0) at(index, cachedStarts[chunkIndex - 1]) else if (index > 0) lastPage(index - 1) else null,
             if (chunkIndex + 1 < cachedStarts.size) at(index, cachedStarts[chunkIndex + 1]) else if (index + 1 < links.size) at(index + 1, 0) else null,
-            text.takeIf { it.isNotBlank() }?.let { TextChunk(it, TextLocator(links[index].href.toString(), start.toLong()), TextLocator(links[index].href.toString(), end.toLong())) }, chunkIndex, cachedStarts.size)
+            text.takeIf { it.isNotBlank() }?.let { TextChunk(it, TextLocator(links[index].href.toString(), start.toLong()), TextLocator(links[index].href.toString(), end.toLong())) }, chunkIndex, cachedStarts.size, offset - start)
+    }
+
+    override fun locateText(locator: TextLocator): ReadingLocator {
+        val index = links.indexOfFirst { it.href.toString() == locator.sectionId }
+        require(index >= 0 && locator.characterOffset <= TextPagination.MAX_SECTION_CHARS)
+        return at(index, locator.characterOffset.toInt())
     }
 
     private suspend fun lastPage(index: Int): ReadingLocator.Epub {

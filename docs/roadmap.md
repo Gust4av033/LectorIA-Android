@@ -67,3 +67,26 @@ Fase C, voz local real y recuperación textual, dentro de su alcance separado.
   rendimiento y fuentes. PDFs muy complejos pueden superar los límites de memoria.
 - Robolectric no sustituye GPU, TalkBack, gestos, ventanas y dispositivos físicos.
 - No hay backend, permisos de envío de texto ni proveedores de pago configurados.
+
+## Fase C — Voz local (continuación)
+
+Rama feature/fase-c-voz-local, basada en Fase B (PR #3 pendiente de integración al
+comenzar). El usuario confirmó lectura EPUB en su teléfono: USER_REPORTED.
+TTS instalado, controles, avance independiente y servicio multimedia implementados.
+Estado de pruebas y pasos de teléfono: testing-phase-c.md. La validación de una
+sesión larga con pantalla apagada, Bluetooth, llamada y ahorro de batería sigue
+pendiente; no se declara DONE por compilar o pasar Robolectric.
+
+### Revisión de Fase C — 0.4.1
+
+El primer intento físico de TTS falló según el usuario. Correcciones de arranque,
+solicitud TTS, diagnóstico y controles implementadas en la misma rama/PR #4.
+Repetir prueba de voz y EPUB en teléfono antes de avanzar a IA u otra fase.
+
+### Revisión 0.4.2
+
+Se corrige la cola SDK que podía cancelar la carga de voz, se sustituye la conexión
+fallida con un reintento limitado y se añaden estados de conexión/diagnóstico.
+La muestra del sistema sí funciona según el usuario; la app requiere nueva prueba
+física después de actualizar. Build y 94 tests locales PASS. No avanzar a Fase D
+hasta validar la escucha real de esta entrega.

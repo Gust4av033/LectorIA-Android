@@ -22,6 +22,23 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class DocumentReaderTest {
+    @Test fun `speech offsets translate to a format locator and restore inside the same fragment`() = runBlocking {
+        for (format in BookFormat.entries) {
+            val bytes = when (format) {
+                BookFormat.TXT -> "Niño, canción y lectura local.".toByteArray()
+                BookFormat.EPUB -> DocumentFixtures.epub()
+                BookFormat.PDF -> DocumentFixtures.pdf()
+            }
+            reader().open(book(format, bytes, if (format == BookFormat.TXT) "UTF-8" else null)).getOrThrow().use { session ->
+                val page = session.page(session.sections().first().start)
+                val start = checkNotNull(page.chunk).start
+                val locator = session.locateText(start.copy(characterOffset = start.characterOffset + 5))
+                val restored = session.page(locator)
+                assertEquals(5, restored.offsetInFragment)
+                assertEquals(page.text.substring(5), restored.text.substring(restored.offsetInFragment))
+            }
+        }
+    }
     @get:Rule val temp = TemporaryFolder()
     private fun book(format: BookFormat, bytes: ByteArray, encoding: String? = null): Book {
         val file = temp.newFile("book.${format.name.lowercase()}").apply { writeBytes(bytes) }

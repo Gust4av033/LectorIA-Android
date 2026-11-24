@@ -76,25 +76,15 @@ fun LectorIaApp() {
                     LibraryRoute(onOpenBook = { id -> navController.navigate("reader?bookId=${android.net.Uri.encode(id)}") { launchSingleTop = true } })
                 }
                 composable("reader?bookId={bookId}", arguments = listOf(navArgument("bookId") { type = NavType.StringType; nullable = true; defaultValue = null })) {
-                    ReaderRoute(onLibrary = { navController.navigate(Destination.Library.route) { popUpTo(Destination.Library.route); launchSingleTop = true } })
+                    ReaderRoute(onListen = { navController.navigate("player") }, onLibrary = { navController.navigate(Destination.Library.route) { popUpTo(Destination.Library.route); launchSingleTop = true } })
                 }
                 composable(Destination.Player.route) {
-                    PendingScreen(
-                        title = R.string.player,
-                        headline = R.string.player_headline,
-                        description = R.string.player_pending,
-                        icon = R.drawable.ic_player,
-                        tag = "screen_player",
-                    )
+                    com.lectoria.app.presentation.player.PlayerRoute(
+                        onLibrary = { navController.navigate("library") },
+                        onReader = { id -> navController.navigate("reader?bookId=$id") })
                 }
                 composable(Destination.Settings.route) {
-                    PendingScreen(
-                        title = R.string.settings,
-                        headline = R.string.settings_headline,
-                        description = R.string.settings_pending,
-                        icon = R.drawable.ic_settings,
-                        tag = "screen_settings",
-                    )
+                    com.lectoria.app.presentation.player.PlayerRoute(onLibrary = {}, onReader = {}, settingsOnly = true)
                 }
             }
         }

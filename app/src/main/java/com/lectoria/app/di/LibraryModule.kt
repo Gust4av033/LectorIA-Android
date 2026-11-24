@@ -37,7 +37,7 @@ import javax.inject.Singleton
 object LibraryModule {
     @Provides @Singleton
     fun database(@ApplicationContext context: Context): LibraryDatabase =
-        Room.databaseBuilder(context, LibraryDatabase::class.java, "library.db").addMigrations(LibraryDatabase.MIGRATION_1_2).build()
+        Room.databaseBuilder(context, LibraryDatabase::class.java, "library.db").addMigrations(LibraryDatabase.MIGRATION_1_2, LibraryDatabase.MIGRATION_2_3).build()
 
     @Provides @Singleton
     fun progress(database: LibraryDatabase): ReadingProgressRepository = RoomReadingProgressRepository(database)

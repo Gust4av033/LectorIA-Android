@@ -73,3 +73,24 @@ modelo ni ejecución de la suite instrumentada.
 Estado exacto de ejecución y límites de formato: `testing-phase-b.md` y
 `architecture.md` ADR-009/010. La implementación visual PDF y el reinicio real
 en teléfono no se declaran DONE a partir de Robolectric.
+
+## Fase C — Voz local implementada, en validación
+
+Motor/voz/velocidad reales, entrada desde lector, reproductor y ajustes conectados,
+pausa/reanudación textual, avance de escucha independiente, servicio foreground,
+MediaSession/notificación, foco de audio y pausa por desconexión implementados.
+Migración Room 2→3 conserva libros y ReadingProgress. Pruebas del coordinador,
+puente SDK y migración: consultar testing-phase-c.md para resultados finales.
+Audio/Bluetooth/llamadas/pantalla apagada/batería requieren prueba física; no se
+atribuyen al agente ni a la confirmación del usuario sobre el lector EPUB.
+
+Seguimiento 0.4.1: el usuario reportó fallo de voz con Samsung/Google y confusión en
+los controles. Se implementa recuperación/inicialización TTS, protección de
+foreground y rediseño de reproductor con prueba de voz independiente. Evidencia y
+límites en testing-phase-c.md; no se declara corregido en hardware sin confirmación.
+
+0.4.2: AOSP y la prueba del adaptador verifican preservación de LoadVoiceItem al
+usar QUEUE_ADD. Recuperación limitada del -4, timeout, confirmación por callback,
+voz predeterminada offline y reconexión manual implementados. 94 pruebas locales
+PASS; el usuario confirma voz audible en ajustes de Android y fallo en la app.
+Repetición de la prueba física tras esta corrección: pendiente.

@@ -15,6 +15,8 @@ interface DocumentSession : AutoCloseable {
     val canExtractText: Boolean
     suspend fun sections(): List<DocumentSection>
     suspend fun page(locator: ReadingLocator): DocumentPage
+    /** Translate an extraction offset without confusing it with an audio-file timeline. */
+    fun locateText(locator: TextLocator): ReadingLocator
     /** Optional PNG preview, generated in memory. Text extraction does not depend on rendering. */
     suspend fun image(locator: ReadingLocator): ByteArray? = null
     fun textFrom(locator: ReadingLocator): Flow<TextChunk>
@@ -34,6 +36,7 @@ data class DocumentPage(
     val chunk: TextChunk?,
     val fragmentIndex: Int = 0,
     val fragmentCount: Int = 1,
+    val offsetInFragment: Int = 0,
 )
 
 enum class ReaderFailure { OPEN, LOCATION, TOO_LARGE, PROTECTED }
