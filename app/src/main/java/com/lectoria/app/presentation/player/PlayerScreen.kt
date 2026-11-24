@@ -32,83 +32,177 @@ class PlayerViewModel @Inject constructor(val client: NarrationClient) : ViewMod
     fun read(onBook: (String) -> Unit) { viewModelScope.launch { client.readerPosition()?.let { onBook(it.value) } } }
 }
 
+data class PlayerActions(
+    val play: () -> Unit = {}, val pause: () -> Unit = {}, val previous: () -> Unit = {}, val next: () -> Unit = {},
+    val stop: () -> Unit = {}, val library: () -> Unit = {}, val read: () -> Unit = {}, val refresh: () -> Unit = {},
+    val test: () -> Unit = {}, val engine: (String) -> Unit = {}, val voice: (String) -> Unit = {}, val rate: (Float) -> Unit = {},
+)
+
 @Composable
 fun PlayerRoute(onLibrary: () -> Unit, onReader: (String) -> Unit, settingsOnly: Boolean = false, viewModel: PlayerViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    PlayerScreen(state, PlayerActions(viewModel.client::play, viewModel.client::pause, viewModel.client::previous,
+        viewModel.client::next, viewModel.client::stop, onLibrary, { viewModel.read(onReader) }, viewModel::refresh,
+        viewModel.client::testVoice, viewModel::engine, viewModel::voice, viewModel::rate), settingsOnly)
+}
+
+@Composable
+fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Boolean = false) {
+    CompositionLocalProvider(LocalContentColor provides Midnight.Text) {
+    var voiceDialog by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf(false) }
+    var help by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    var engineMenu by remember { mutableStateOf(false) }
-    var voiceMenu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
-        .testTag(if (settingsOnly) "screen_settings" else "screen_player"), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(if (settingsOnly) "Ajustes de voz" else "Escucha tu libro", style = MaterialTheme.typography.headlineLarge)
-        Text("Voz local · sin archivos de audio generados", color = Midnight.Highlight)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+        .testTag(if (settingsOnly) "screen_settings" else "screen_player"), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Text(if (settingsOnly) "Ajustes de voz" else "Reproductor", style = MaterialTheme.typography.headlineLarge)
         if (!settingsOnly) {
-            Text(state.book?.title ?: "Elige un libro de tu biblioteca y toca «Escuchar desde aquí» en el lector.", style = MaterialTheme.typography.titleLarge)
-            if (state.book == null) LectorButton(onClick = onLibrary) { Text("Ir a biblioteca") }
-            else {
-                Text(when (state.phase) {
-                    SpeechPhase.PREPARING -> "Preparando lectura…"
-                    SpeechPhase.PLAYING -> "Leyendo · sección ${state.sectionIndex + 1} de ${state.sectionCount} · fragmento ${state.fragmentIndex + 1} de ${state.fragmentCount}"
-                    SpeechPhase.COMPLETED -> "Lectura terminada"
-                    SpeechPhase.FAILED -> "No se pudo continuar"
-                    SpeechPhase.IDLE -> "Detenido"
-                    SpeechPhase.PAUSED -> when (state.pauseReason) {
-                        PauseReason.FOCUS -> "Pausado por otra aplicación o llamada. Reanuda cuando quieras."
-                        PauseReason.HEADPHONES -> "Auriculares desconectados. Reanuda cuando estés listo."
-                        PauseReason.SETTINGS -> "Voz o velocidad cambiada. Pulsa Reproducir."
-                        else -> "En pausa"
+            com.lectoria.app.presentation.screens.GlassCard {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Icon(androidx.compose.ui.res.painterResource(com.lectoria.app.R.drawable.ic_reader), null,
+                        Modifier.size(40.dp), tint = Midnight.Highlight)
+                    Text(state.book?.title ?: "Tu próxima lectura", style = MaterialTheme.typography.headlineSmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3)
+                    state.book?.author?.let { Text(it, color = Midnight.MutedText) }
+                    Text(playerStatus(state), Modifier.testTag("speech_status"), color = Midnight.Highlight)
+                    if (state.book != null) {
+                        if (state.sectionCount > 0) Text("Sección ${state.sectionIndex + 1} de ${state.sectionCount} · Parte ${state.fragmentIndex + 1} de ${state.fragmentCount}",
+                            style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly) {
+                            Transport(com.lectoria.app.R.drawable.ic_speech_back, "Parte anterior", state.hasPrevious && !state.loadingVoices, actions.previous)
+                            LectorButton(onClick = if (state.active) actions.pause else actions.play,
+                                enabled = state.active || (state.voice != null && !state.loadingVoices),
+                                modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("speech_play")) {
+                                Icon(androidx.compose.ui.res.painterResource(if (state.active) com.lectoria.app.R.drawable.ic_speech_pause else com.lectoria.app.R.drawable.ic_speech_play), null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (state.active) "Pausar" else if (state.phase == SpeechPhase.COMPLETED) "Repetir libro" else "Escuchar")
+                            }
+                            Transport(com.lectoria.app.R.drawable.ic_speech_next, "Parte siguiente", state.hasNext && !state.loadingVoices, actions.next)
+                        }
+                        Text("Anterior y siguiente cambian de parte del texto.", style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            LectorTextButton(onClick = actions.stop, enabled = state.active || state.phase == SpeechPhase.PAUSED) { Text("Finalizar escucha") }
+                            LectorTextButton(onClick = actions.read) { Text("Ver libro") }
+                        }
+                    } else {
+                        Text("Abre un libro para empezar a escucharlo.", color = Midnight.MutedText)
+                        LectorButton(onClick = actions.library) { Text("Elegir un libro") }
                     }
-                }, Modifier.testTag("speech_status"), color = Midnight.Highlight)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LectorButton(onClick = { if (state.active) viewModel.client.pause() else viewModel.client.play() },
-                        enabled = state.active || state.voice != null, modifier = Modifier.testTag("speech_play")) {
-                        Text(if (state.active) "Pausar" else if (state.phase == SpeechPhase.COMPLETED) "Volver a escuchar" else "Reproducir")
+                }
+            }
+        }
+        state.failure?.let { failure ->
+            com.lectoria.app.presentation.screens.GlassCard {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Lectura interrumpida", style = MaterialTheme.typography.titleMedium)
+                    Text(engineFailureText(failure, state.engineErrorCode), Modifier.testTag("speech_error"))
+                    Row {
+                        if (state.voice != null && state.book != null) LectorTextButton(onClick = actions.play) { Text("Reintentar") }
+                        LectorTextButton(onClick = { voiceDialog = true }) { Text("Cambiar voz") }
                     }
-                    LectorTextButton(onClick = viewModel.client::stop) { Text("Detener") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LectorTextButton(onClick = viewModel.client::previous, enabled = state.hasPrevious) { Text("Anterior") }
-                    LectorTextButton(onClick = viewModel.client::next, enabled = state.hasNext) { Text("Siguiente") }
-                }
-                if (state.preview.isNotBlank()) Text(state.preview, style = MaterialTheme.typography.bodyLarge)
-                LectorTextButton(onClick = { viewModel.read(onReader) }) { Text("Abrir esta parte en el lector") }
-            }
-        }
-        state.failure?.let { Text(speechFailureText(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("speech_error")) }
-        if (state.saveFailed) Text("No se pudo guardar el avance de escucha. Se mantiene en memoria; vuelve a pausar para reintentar.", color = MaterialTheme.colorScheme.error)
-        if (state.loadingVoices) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Midnight.Highlight)
-        Text("Motor y voz", style = MaterialTheme.typography.titleMedium)
-        Box {
-            LectorTextButton(onClick = { engineMenu = true }, enabled = !state.loadingVoices && state.catalog.engines.isNotEmpty()) {
-                Text(state.catalog.engines.firstOrNull { it.id == state.settings.engineId }?.label ?: "Sin motor TTS disponible")
-            }
-            DropdownMenu(engineMenu, { engineMenu = false }) {
-                state.catalog.engines.forEach { engine -> DropdownMenuItem(text = { Text(engine.label) }, onClick = { engineMenu = false; viewModel.engine(engine.id) }) }
-            }
-        }
-        Box {
-            LectorTextButton(onClick = { voiceMenu = true }, enabled = !state.loadingVoices && state.catalog.voices.any { it.offline && it.installed }) {
-                Text(state.voice?.let { "${it.languageTag} · ${it.label}" } ?: "Elegir una voz instalada sin red")
-            }
-            DropdownMenu(voiceMenu, { voiceMenu = false }) {
-                state.catalog.voices.filter { it.offline && it.installed }.forEach { voice ->
-                    DropdownMenuItem(text = { Text("${voice.languageTag} · ${voice.label}") }, onClick = { voiceMenu = false; viewModel.voice(voice.id) })
                 }
             }
         }
-        Text("Solo se ofrecen voces que el motor identifica como instaladas y sin conexión. La calidad depende del motor y del idioma.", color = Midnight.MutedText)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LectorTextButton(onClick = { viewModel.rate((state.settings.rate - 0.1f).coerceAtLeast(0.5f)) }, enabled = state.settings.rate > 0.5f) { Text("Más lento") }
-            Text(String.format(Locale.getDefault(), "%.1f×", state.settings.rate), Modifier.padding(top = 12.dp))
-            LectorTextButton(onClick = { viewModel.rate((state.settings.rate + 0.1f).coerceAtMost(2f)) }, enabled = state.settings.rate < 2f) { Text("Más rápido") }
+        if (state.saveFailed) Text("El avance aún no pudo guardarse. Pausa la lectura para reintentar.", color = MaterialTheme.colorScheme.error)
+        com.lectoria.app.presentation.screens.GlassCard {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Voz de lectura", style = MaterialTheme.typography.titleMedium)
+                Text(state.voice?.let { friendlyVoice(it, state.catalog.voices) } ?: "Elige una voz en español", style = MaterialTheme.typography.titleLarge)
+                Text(state.catalog.engines.firstOrNull { it.id == state.settings.engineId }?.label ?: "Configura el motor de voz", color = Midnight.MutedText)
+                Row {
+                    LectorTextButton(onClick = { voiceDialog = true }, modifier = Modifier.testTag("change_voice")) { Text("Cambiar voz") }
+                    LectorTextButton(onClick = actions.test, enabled = state.voice != null && !state.active && !state.loadingVoices) { Text("Probar voz") }
+                }
+                if (state.loadingVoices) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Midnight.Highlight)
+                HorizontalDivider(color = Midnight.MutedText.copy(alpha = 0.2f))
+                Text("Velocidad", style = MaterialTheme.typography.labelLarge)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    LectorTextButton(onClick = { actions.rate((state.settings.rate - 0.1f).coerceAtLeast(0.5f)) }, enabled = state.settings.rate > 0.5f) { Text("Más lenta") }
+                    Text(String.format(Locale.getDefault(), "%.1f×", state.settings.rate), style = MaterialTheme.typography.titleLarge)
+                    LectorTextButton(onClick = { actions.rate((state.settings.rate + 0.1f).coerceAtMost(2f)) }, enabled = state.settings.rate < 2f) { Text("Más rápida") }
+                }
+            }
         }
-        Text("La pausa guarda la última palabra informada por el motor. Si no ofrece esa información, al reanudar se repite el fragmento actual.", color = Midnight.MutedText)
-        LectorTextButton(onClick = viewModel::refresh, enabled = !state.active && !state.loadingVoices) { Text("Actualizar voces") }
-        LectorTextButton(onClick = {
-            try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
-            catch (_: android.content.ActivityNotFoundException) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-        }) { Text("Configurar voces en Android") }
+        if (state.preview.isNotBlank() && !settingsOnly) {
+            LectorTextButton(onClick = { preview = !preview }) { Text(if (preview) "Ocultar texto" else "Mostrar texto de esta parte") }
+            if (preview) Text(state.preview, style = MaterialTheme.typography.bodyLarge)
+        }
+        LectorTextButton(onClick = { help = !help }) { Text(if (help) "Cerrar ayuda" else "Ayuda con la voz") }
+        if (help || settingsOnly) {
+            Text("Cambiar la voz o velocidad pausa la escucha. Pulsa Escuchar para continuar. La pausa retoma la última palabra indicada por el motor; algunos motores repiten parte del texto.", color = Midnight.MutedText)
+            LectorTextButton(onClick = actions.refresh, enabled = !state.active && !state.loadingVoices) { Text("Actualizar voces instaladas") }
+            LectorTextButton(onClick = {
+                try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
+                catch (_: android.content.ActivityNotFoundException) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+            }) { Text("Abrir ajustes de voz de Android") }
+        }
     }
+    if (voiceDialog) AlertDialog(onDismissRequest = { voiceDialog = false }, title = { Text("Elige cómo escuchar") }, text = {
+        androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { Text("Motor de voz", style = MaterialTheme.typography.labelLarge) }
+            items(state.catalog.engines.size) { index -> val engine = state.catalog.engines[index]
+                LectorTextButton(onClick = { actions.engine(engine.id) }, enabled = !state.loadingVoices, modifier = Modifier.fillMaxWidth()) {
+                    RadioButton(selected = state.settings.engineId == engine.id, onClick = null)
+                    Text(engine.label, Modifier.weight(1f))
+                }
+            }
+            item { Text("Voces instaladas · sin Internet", style = MaterialTheme.typography.labelLarge) }
+            val voices = state.catalog.voices.filter { it.offline && it.installed }
+            if (state.loadingVoices) item { Text("Cargando voces…"); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (voices.isEmpty() && !state.loadingVoices) item { Text("No hay voces listas. Abre los ajustes de Android para instalar una voz y después actualiza la lista.") }
+            items(voices.size) { index -> val voice = voices[index]
+                LectorTextButton(onClick = { actions.voice(voice.id); voiceDialog = false }, enabled = !state.loadingVoices, modifier = Modifier.fillMaxWidth()) {
+                    RadioButton(selected = state.settings.voiceId == voice.id, onClick = null)
+                    Text(friendlyVoice(voice, state.catalog.voices), Modifier.weight(1f))
+                }
+            }
+        }
+    }, confirmButton = { LectorTextButton(onClick = { voiceDialog = false }) { Text("Listo") } })
+    }
+}
+
+@Composable
+private fun Transport(icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+        FilledTonalIconButton(onClick, enabled = enabled, modifier = Modifier.size(48.dp)) {
+            Icon(androidx.compose.ui.res.painterResource(icon), contentDescription = label)
+        }
+        Text(label, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    }
+}
+
+internal fun friendlyVoice(voice: SpeechVoice, all: List<SpeechVoice>): String {
+    val locale = Locale.forLanguageTag(voice.languageTag)
+    val language = locale.getDisplayLanguage(Locale.forLanguageTag("es")).replaceFirstChar { it.titlecase(Locale.forLanguageTag("es")) }
+    val country = locale.getDisplayCountry(Locale.forLanguageTag("es")).takeIf { it.isNotBlank() }
+    val group = all.filter { it.offline && it.installed && it.languageTag == voice.languageTag }.sortedBy { it.id }
+    val variant = if (group.size > 1) " · Voz ${group.indexOfFirst { it.id == voice.id } + 1}" else ""
+    return language + (country?.let { " · $it" } ?: "") + variant
+}
+
+private fun playerStatus(state: NarrationState): String = if (state.testingVoice) "Probando la voz…" else when (state.phase) {
+    SpeechPhase.IDLE -> "Listo para escuchar"
+    SpeechPhase.PREPARING -> "Preparando voz…"
+    SpeechPhase.PLAYING -> "Leyendo en voz alta"
+    SpeechPhase.PAUSED -> when (state.pauseReason) {
+        PauseReason.FOCUS -> "En pausa por otra aplicación o llamada"
+        PauseReason.HEADPHONES -> "En pausa: auriculares desconectados"
+        else -> "Lectura en pausa"
+    }
+    SpeechPhase.COMPLETED -> "Libro terminado"
+    SpeechPhase.FAILED -> "La lectura necesita atención"
+}
+
+internal fun engineFailureText(failure: SpeechFailure, code: Int?): String = if (failure != SpeechFailure.ENGINE || code == null) speechFailureText(failure) else when(code) {
+    -9 -> "Esta voz necesita instalarse. Abre los ajustes de Android y descarga sus datos."
+    -8 -> "El motor rechazó el texto (código -8). Prueba la voz y vuelve a abrir esta parte del libro."
+    -7, -6 -> "Esta voz intentó usar red (código $code). Elige otra voz instalada que funcione sin Internet."
+    -5 -> "No se pudo abrir la salida de audio (código -5). Revisa el volumen multimedia y los auriculares."
+    -4 -> "El servicio de voz se desconectó (código -4). Prueba la voz de nuevo."
+    -3 -> "El motor no pudo generar la voz (código -3). Usa Probar voz o elige otra voz instalada."
+    else -> "El motor devolvió el código $code. Usa Probar voz para comprobarlo sin abrir el libro."
 }
 
 fun speechFailureText(failure: SpeechFailure): String = when (failure) {
