@@ -38,4 +38,4 @@ interface LocalNarrationEngine : NarrationEngine {
 }
 
 enum class SpeechFailure { NO_ENGINE, NO_OFFLINE_VOICE, INIT, ENGINE, DOCUMENT, LOCATION, NO_TEXT, AUDIO_FOCUS, STORAGE, SERVICE }
-class SpeechException(val reason: SpeechFailure) : Exception(reason.name)
+class SpeechException(val reason: SpeechFailure, val engineCode: Int? = null) : Exception(reason.name)

@@ -18,15 +18,30 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NarrationCoordinatorTest {
+    @Test fun `voice sample uses no book text and cannot advance the saved listening position`() = runTest {
+        val r = Rig(this)
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        r.engine.range(5); runCurrent()
+        r.coordinator.pause()
+        val saved = r.marks.entries[book().id]
+        r.coordinator.testVoice(); runCurrent()
+        assertEquals("voice-test", r.engine.requests.last().chunk.start.sectionId)
+        assertTrue(r.coordinator.state.value.testingVoice)
+        r.engine.finish(); runCurrent()
+        assertEquals(saved, r.marks.entries[book().id])
+        assertEquals(SpeechPhase.PAUSED, r.coordinator.state.value.phase)
+        assertFalse(r.coordinator.state.value.testingVoice)
+    }
     private val spanish = SpeechVoice("es-local", "Español local", "es-GT", true, true, 200)
     private val english = SpeechVoice("en-local", "English local", "en-US", true, true, 300)
     private fun book(id: String = "one") = Book(BookId(id), "Libro $id", null, BookFormat.TXT, "0".repeat(64), "/synthetic/$id.txt", Instant.EPOCH, 200)
 
     private inner class Books : BookRepository {
+        var lookupGate: CompletableDeferred<Unit>? = null
         val entries = MutableStateFlow(listOf(book(), book("two")))
         override fun observeBooks() = entries
         override fun observeLibrary() = flow<LibraryContent> { }
-        override suspend fun find(id: BookId) = entries.value.firstOrNull { it.id == id }
+        override suspend fun find(id: BookId): Book? { lookupGate?.await(); return entries.value.firstOrNull { it.id == id } }
         override suspend fun importDocument(source: DocumentSource): Result<ImportOutcome> = Result.failure(IOException())
         override suspend fun reconcile() = Result.success(Unit)
         override suspend fun discardFailedImport(id: BookId) = Result.success(Unit)
@@ -258,6 +273,21 @@ class NarrationCoordinatorTest {
         r.coordinator.pause(); gate.complete(Unit); runCurrent()
         assertTrue(r.engine.requests.isEmpty())
         assertEquals(SpeechPhase.PAUSED, r.coordinator.state.value.phase)
+    }
+
+    @Test fun `play enters preparation before database lookup and respects pause during that lookup`() = runTest {
+        val r = Rig(this)
+        val gate = CompletableDeferred<Unit>()
+        r.books.lookupGate = gate
+        launch { r.coordinator.start(book().id, ReadingLocator.Text(0)) }
+        runCurrent()
+        assertEquals(SpeechPhase.PREPARING, r.coordinator.state.value.phase)
+        launch { r.coordinator.pause() }
+        runCurrent()
+        gate.complete(Unit)
+        runCurrent()
+        assertTrue(r.engine.requests.isEmpty())
+        assertFalse(r.coordinator.state.value.active)
     }
 
     @Test fun `rapid stop and book switch cannot cancel the newer speech job`() = runTest {

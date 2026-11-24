@@ -33,4 +33,5 @@ class AndroidNarrationClient(private val context: Context, private val coordinat
     override fun next() = send("next")
     override fun previous() = send("previous")
     override fun stop() = send("stop")
+    override fun testVoice() = send("test")
 }

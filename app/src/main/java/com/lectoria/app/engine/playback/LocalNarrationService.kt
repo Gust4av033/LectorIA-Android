@@ -39,6 +39,8 @@ class LocalNarrationService : Service() {
     private var heartbeat: Job? = null
     private var token = 0L
     private var receivedCommand = false
+    private var pendingCommands = 0
+    private var destroyed = false
     private val noisy = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) serviceScope.launch { coordinator.pause(PauseReason.HEADPHONES) }
@@ -70,7 +72,6 @@ class LocalNarrationService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         receivedCommand = true
-        foreground(notification(coordinator.state.value))
         dispatch(intent?.action ?: "stop", intent)
         return START_NOT_STICKY
     }
@@ -78,7 +79,9 @@ class LocalNarrationService : Service() {
     private fun foreground(notification: Notification) = ServiceCompat.startForeground(this, 41, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
 
     private fun dispatch(action: String, intent: Intent? = null) {
-        if (action == "play" || action == "listen") foreground(notification(coordinator.state.value))
+        pendingCommands++
+        try { foreground(notification(coordinator.state.value)) }
+        catch (_: RuntimeException) { pendingCommands--; coordinator.reportServiceFailure(); stopSelf(); return }
         serviceScope.launch {
             try {
                 when (action) {
@@ -87,15 +90,18 @@ class LocalNarrationService : Service() {
                     "pause" -> coordinator.pause()
                     "next" -> coordinator.skip(true)
                     "previous" -> coordinator.skip(false)
+                    "test" -> coordinator.testVoice()
                     else -> coordinator.stop()
                 }
                 update(coordinator.state.value)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { coordinator.reportServiceFailure(); update(coordinator.state.value) }
+            finally { pendingCommands--; update(coordinator.state.value) }
         }
     }
 
     private fun update(state: NarrationState) {
+        if (destroyed) return
         session.isActive = state.book != null && state.phase != SpeechPhase.IDLE
         session.setMetadata(MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, state.book?.title ?: "Lector IA")
             .putString(MediaMetadata.METADATA_KEY_ARTIST, state.book?.author ?: "Voz local").build())
@@ -108,7 +114,7 @@ class LocalNarrationService : Service() {
             SpeechPhase.FAILED -> PlaybackState.STATE_ERROR
             else -> PlaybackState.STATE_PAUSED
         }, PlaybackState.PLAYBACK_POSITION_UNKNOWN, state.settings.rate).build())
-        if (state.active) {
+        if (state.active || pendingCommands > 0) {
             foreground(notification(state))
             if (heartbeat == null) heartbeat = serviceScope.launch {
                 while (isActive) { wake.acquire(120_000); delay(60_000) }
@@ -154,6 +160,7 @@ class LocalNarrationService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
+        destroyed = true
         serviceScope.cancel()
         unregisterReceiver(noisy)
         heartbeat?.cancel()

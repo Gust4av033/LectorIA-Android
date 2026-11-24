@@ -177,16 +177,18 @@ class NarrationCoordinator(
         cancelPlayback()
         actions.withLock {
             if (operation != generation) return@withLock
+            mutableState.update { it.copy(phase = SpeechPhase.PREPARING, failure = null, engineErrorCode = null) }
             try {
                 val selected = id ?: state.value.book?.id ?: bookmarks.lastBook() ?: reading.lastBook()
                     ?: throw SpeechException(SpeechFailure.DOCUMENT)
                 val book = books.find(selected)?.takeIf { it.available } ?: throw SpeechException(SpeechFailure.DOCUMENT)
                 val saved = if (locator == null) pending?.takeIf { it.bookId == selected } ?: bookmarks.load(selected) else null
                 val from = locator ?: saved?.locator ?: state.value.locator?.takeIf { state.value.book?.id == selected } ?: reading.load(selected)?.locator
+                if (operation != generation) return@withLock
                 saved?.let { lastWriteTime = maxOf(lastWriteTime, it.updatedAt) }
                 pending = saved
                 mutableState.update { it.copy(book = book, locator = from, phase = SpeechPhase.PREPARING,
-                    failure = null, saveFailed = false, pauseReason = null, preview = "") }
+                    failure = null, engineErrorCode = null, testingVoice = false, saveFailed = false, pauseReason = null, preview = "") }
                 playback = scope.launch { speakBook(operation, selected, from, saved?.completed == true) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { fail((error as? SpeechException)?.reason ?: SpeechFailure.DOCUMENT) }
@@ -248,11 +250,14 @@ class NarrationCoordinator(
             mutableState.update { it.copy(phase = SpeechPhase.COMPLETED, locator = pending?.locator, failure = null) }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) {
-            if (operation == generation) fail(when (error) {
+            if (operation == generation) {
+                mutableState.update { it.copy(engineErrorCode = (error as? SpeechException)?.engineCode) }
+                fail(when (error) {
                 is SpeechException -> error.reason
                 is ReaderException -> if (error.reason == ReaderFailure.LOCATION) SpeechFailure.LOCATION else SpeechFailure.DOCUMENT
                 else -> SpeechFailure.DOCUMENT
-            })
+                })
+            }
         } finally {
             withContext(NonCancellable) {
                 requestId = null
@@ -280,6 +285,33 @@ class NarrationCoordinator(
         if (operation == generation) mutableState.update { it.copy(phase = SpeechPhase.IDLE, failure = null) }
     }
 
+    suspend fun testVoice() {
+        pause(PauseReason.SETTINGS)
+        val operation = ++generation
+        actions.withLock {
+            mutableState.update { it.copy(phase = SpeechPhase.PREPARING, testingVoice = true, failure = null, engineErrorCode = null) }
+            playback = scope.launch {
+                try {
+                    loadSettings()
+                    catalog()
+                    val voice = state.value.voice ?: throw SpeechException(state.value.failure ?: SpeechFailure.NO_OFFLINE_VOICE)
+                    if (!focus.acquire { scope.launch { pause(PauseReason.FOCUS) } }) throw SpeechException(SpeechFailure.AUDIO_FOCUS)
+                    mutableState.update { it.copy(phase = SpeechPhase.PLAYING) }
+                    val text = "Hola. Esta es la voz que leerá tu libro."
+                    engine.narrate(SpeechRequest(UUID.randomUUID().toString(), TextChunk(text, TextLocator("voice-test", 0),
+                        TextLocator("voice-test", text.length.toLong())), voice.id, state.value.settings.rate)).getOrThrow()
+                    mutableState.update { it.copy(phase = if (it.book == null) SpeechPhase.IDLE else SpeechPhase.PAUSED, pauseReason = PauseReason.SETTINGS) }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (error: Exception) {
+                    if (operation == generation) {
+                        mutableState.update { it.copy(engineErrorCode = (error as? SpeechException)?.engineCode) }
+                        fail((error as? SpeechException)?.reason ?: SpeechFailure.ENGINE)
+                    }
+                } finally { withContext(NonCancellable) { engine.cancel(); focus.release(); mutableState.update { it.copy(testingVoice = false) } } }
+            }
+        }
+    }
+
     suspend fun skip(forward: Boolean) {
         val wasActive = state.value.active
         val operation = generation + 1
@@ -291,7 +323,9 @@ class NarrationCoordinator(
             try {
                 val session = reader.open(checkNotNull(state.value.book)).getOrThrow()
                 try {
-                    if (operation != generation) return@withLock
+                    if (operation != generation) {
+                        return@withLock
+                    }
                     val page = session.page(state.value.locator ?: session.sections().first().start)
                     target = if (forward) page.next else page.previous
                     target?.let { mark(id, it); savePending(); mutableState.update { state -> state.copy(locator = it, phase = SpeechPhase.PAUSED, failure = null) } }

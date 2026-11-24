@@ -40,6 +40,7 @@ class AndroidLocalNarrationEngine internal constructor(
     private var request: SpeechRequest? = null
     private var completion: CancellableContinuation<Result<Unit>>? = null
     private var platformGeneration = 0L
+    private var parentRequestId: String? = null
 
     override suspend fun configure(engineId: String?): VoiceCatalog = withContext(dispatcher) {
         val engines = factory.engines()
@@ -51,16 +52,21 @@ class AndroidLocalNarrationEngine internal constructor(
             val generation = ++platformGeneration
             val initialized = CompletableDeferred<Boolean>()
             val listener = object : SpeechPlatform.Listener {
+                override fun started(id: String) = post {
+                    val active = request
+                    if (generation == platformGeneration && active?.id == id) mutableEvents.tryEmit(
+                        NarrationEvent.Progress(parentRequestId ?: id, active.chunk.start))
+                }
                 override fun done(id: String) = post { if (generation == platformGeneration) finish(id, null) }
                 override fun error(id: String, code: Int) = post { if (generation == platformGeneration) finish(id,
-                    if (code == TextToSpeech.ERROR_NOT_INSTALLED_YET) SpeechFailure.NO_OFFLINE_VOICE else SpeechFailure.ENGINE) }
+                    if (code == TextToSpeech.ERROR_NOT_INSTALLED_YET) SpeechFailure.NO_OFFLINE_VOICE else SpeechFailure.ENGINE, code) }
                 override fun stopped(id: String) = post { if (generation == platformGeneration) finish(id, SpeechFailure.ENGINE) }
                 override fun range(id: String, start: Int, end: Int) = post {
                     val active = request
                     if (generation == platformGeneration && active?.id == id && start >= 0 && start < end && end <= active.chunk.text.length) {
                         var safeStart = start
                         if (safeStart > 0 && Character.isLowSurrogate(active.chunk.text[safeStart])) safeStart--
-                        mutableEvents.tryEmit(NarrationEvent.Progress(id, TextLocator(active.chunk.start.sectionId, active.chunk.start.characterOffset + safeStart)))
+                        mutableEvents.tryEmit(NarrationEvent.Progress(parentRequestId ?: id, TextLocator(active.chunk.start.sectionId, active.chunk.start.characterOffset + safeStart)))
                     }
                 }
             }
@@ -68,6 +74,7 @@ class AndroidLocalNarrationEngine internal constructor(
             platform = created
             try {
                 if (!withTimeout(10_000) { initialized.await() }) throw SpeechException(SpeechFailure.INIT)
+                created.ready()
                 this@AndroidLocalNarrationEngine.engineId = selected
             } catch (_: TimeoutCancellationException) { shutdown(); throw SpeechException(SpeechFailure.INIT) }
             catch (cancelled: CancellationException) { shutdown(); throw cancelled }
@@ -84,24 +91,38 @@ class AndroidLocalNarrationEngine internal constructor(
         if (!active.setRate(request.rate) || request.chunk.text.isBlank() || request.chunk.text.length > TextToSpeech.getMaxSpeechInputLength()) {
             return@withContext Result.failure(SpeechException(SpeechFailure.ENGINE))
         }
+        parentRequestId = request.id
+        var offset = 0
+        for ((index, part) in speechParts(request.chunk.text).withIndex()) {
+            val chunk = request.chunk.copy(text = part,
+                start = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset),
+                end = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset + part.length))
+            val piece = request.copy(id = if (index == 0) request.id else "${request.id}:$index", chunk = chunk)
+            val result = speakPart(active, piece)
+            if (result.isFailure) return@withContext result
+            offset += part.length
+        }
+        mutableEvents.tryEmit(NarrationEvent.Completed(request.id))
+        Result.success(Unit)
+    }
+
+    private suspend fun speakPart(active: SpeechPlatform, request: SpeechRequest): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
             this@AndroidLocalNarrationEngine.request = request
             completion = continuation
             continuation.invokeOnCancellation { post { if (this@AndroidLocalNarrationEngine.request?.id == request.id) stopImmediately() } }
             try {
-                if (!active.speak(request.chunk.text, request.id)) finish(request.id, SpeechFailure.ENGINE)
-            } catch (_: Exception) { finish(request.id, SpeechFailure.ENGINE) }
+                if (!active.speak(request.chunk.text, request.id)) finish(request.id, SpeechFailure.ENGINE, TextToSpeech.ERROR)
+            } catch (_: Exception) { finish(request.id, SpeechFailure.ENGINE, TextToSpeech.ERROR) }
         }
-    }
 
-    private fun finish(id: String, failure: SpeechFailure?) {
+    private fun finish(id: String, failure: SpeechFailure?, code: Int? = null) {
         if (request?.id != id) return
         request = null
         val pending = completion
         completion = null
-        if (failure == null) mutableEvents.tryEmit(NarrationEvent.Completed(id))
-        else mutableEvents.tryEmit(NarrationEvent.Failed(id, failure.name))
-        if (pending?.isActive == true) pending.resume(if (failure == null) Result.success(Unit) else Result.failure(SpeechException(failure)))
+        if (failure != null) mutableEvents.tryEmit(NarrationEvent.Failed(parentRequestId ?: id, failure.name))
+        if (pending?.isActive == true) pending.resume(if (failure == null) Result.success(Unit) else Result.failure(SpeechException(failure, code)))
     }
 
     override fun stopImmediately() {
@@ -120,4 +141,22 @@ class AndroidLocalNarrationEngine internal constructor(
         platform = null
         engineId = null
     }
+}
+
+/** Small, contiguous utterances work with vendor limits and preserve exact source offsets. */
+internal fun speechParts(text: String): List<String> {
+    val result = mutableListOf<String>()
+    var offset = 0
+    while (offset < text.length) {
+        var end = minOf(offset + 350, text.length)
+        if (end < text.length) {
+            val sentence = (end - 1 downTo offset + 150).firstOrNull { text[it] in ".!?\n" }
+            val space = (end - 1 downTo offset + 150).firstOrNull { text[it].isWhitespace() }
+            end = (sentence ?: space)?.plus(1) ?: end
+            if (Character.isHighSurrogate(text[end - 1])) end--
+        }
+        result += text.substring(offset, end)
+        offset = end
+    }
+    return result
 }

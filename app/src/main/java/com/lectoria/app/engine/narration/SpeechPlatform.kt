@@ -12,6 +12,7 @@ import com.lectoria.app.domain.narration.SpeechVoice
 
 /** Small SDK seam for callback/race tests; the production factory always binds Android TTS. */
 internal interface SpeechPlatform {
+    fun ready() {}
     fun voices(): List<SpeechVoice>
     fun selectVoice(id: String): Boolean
     fun setRate(rate: Float): Boolean
@@ -20,6 +21,7 @@ internal interface SpeechPlatform {
     fun shutdown()
 
     interface Listener {
+        fun started(id: String) {}
         fun done(id: String)
         fun range(id: String, start: Int, end: Int)
         fun error(id: String, code: Int)
@@ -44,13 +46,13 @@ internal class AndroidSpeechPlatformFactory(private val context: Context) : Spee
         AndroidSpeechPlatform(context, engine, initialized, listener)
 }
 
-private class AndroidSpeechPlatform(context: Context, engine: String, initialized: (Boolean) -> Unit, listener: SpeechPlatform.Listener) : SpeechPlatform {
+private class AndroidSpeechPlatform(context: Context, engine: String, initialized: (Boolean) -> Unit, private val listener: SpeechPlatform.Listener) : SpeechPlatform {
     private val tts = TextToSpeech(context, { initialized(it == TextToSpeech.SUCCESS) }, engine)
 
-    init {
+    override fun ready() {
         tts.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String) = Unit
+            override fun onStart(utteranceId: String) = listener.started(utteranceId)
             override fun onDone(utteranceId: String) = listener.done(utteranceId)
             @Deprecated("Android compatibility callback")
             override fun onError(utteranceId: String) = listener.error(utteranceId, TextToSpeech.ERROR)
@@ -73,10 +75,10 @@ private class AndroidSpeechPlatform(context: Context, engine: String, initialize
     }
 
     override fun setRate(rate: Float) = tts.setSpeechRate(rate) == TextToSpeech.SUCCESS
-    @Suppress("DEPRECATION")
     override fun speak(text: String, id: String): Boolean {
-        val options = Bundle().apply { putString(TextToSpeech.Engine.KEY_FEATURE_EMBEDDED_SYNTHESIS, "true") }
-        return tts.speak(text, TextToSpeech.QUEUE_FLUSH, options, id) == TextToSpeech.SUCCESS
+        // The selected Voice determines offline synthesis. Legacy feature flags can
+        // conflict with named voices in vendor engines; do not override their mode.
+        return tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), id) == TextToSpeech.SUCCESS
     }
     override fun stop() { tts.stop() }
     override fun shutdown() { tts.shutdown() }
