@@ -69,7 +69,12 @@ internal class TxtDocumentSession private constructor(
         }
         DocumentPage(ReadingLocator.Text(start), index / 20, text,
             starts.getOrNull(index - 1)?.let(ReadingLocator::Text), starts.getOrNull(index + 1)?.let(ReadingLocator::Text),
-            TextChunk(text, TextLocator("text", start), TextLocator("text", end)), index % 20, minOf(20, starts.size - (index / 20) * 20))
+            TextChunk(text, TextLocator("text", start), TextLocator("text", end)), index % 20, minOf(20, starts.size - (index / 20) * 20), (offset - start).toInt())
+    }
+
+    override fun locateText(locator: TextLocator): ReadingLocator {
+        require(locator.sectionId == "text" && locator.characterOffset < length)
+        return ReadingLocator.Text(locator.characterOffset)
     }
 
     override fun textFrom(locator: ReadingLocator) = flow {

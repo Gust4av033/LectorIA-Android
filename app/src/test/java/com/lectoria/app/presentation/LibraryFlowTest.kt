@@ -182,7 +182,7 @@ class LibraryFlowTest {
         pick(document("Recuperar.txt", "Comienzo seguro: canción y niño.".toByteArray()), 1)
         val context = RuntimeEnvironment.getApplication()
         val database = androidx.room.Room.databaseBuilder(context, com.lectoria.app.data.local.LibraryDatabase::class.java, "library.db")
-            .addMigrations(com.lectoria.app.data.local.LibraryDatabase.MIGRATION_1_2).build()
+            .addMigrations(com.lectoria.app.data.local.LibraryDatabase.MIGRATION_1_2, com.lectoria.app.data.local.LibraryDatabase.MIGRATION_2_3).build()
         try {
             val repository = com.lectoria.app.data.RoomReadingProgressRepository(database)
             val saved = kotlinx.coroutines.runBlocking {

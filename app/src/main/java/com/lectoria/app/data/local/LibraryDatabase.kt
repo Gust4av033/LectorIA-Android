@@ -5,12 +5,18 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [BookEntity::class, ReadingProgressEntity::class], version = 2, exportSchema = true)
+@Database(entities = [BookEntity::class, ReadingProgressEntity::class, NarrationProgressEntity::class], version = 3, exportSchema = true)
 abstract class LibraryDatabase : RoomDatabase() {
     abstract fun books(): BookDao
     abstract fun progress(): ReadingProgressDao
+    abstract fun narration(): NarrationProgressDao
 
     companion object {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `narration_progress` (`bookId` TEXT NOT NULL, `locator` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `completed` INTEGER NOT NULL, PRIMARY KEY(`bookId`), FOREIGN KEY(`bookId`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `reading_progress` (`bookId` TEXT NOT NULL, `locator` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`bookId`), FOREIGN KEY(`bookId`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
