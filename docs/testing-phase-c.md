@@ -28,8 +28,19 @@ se admite. Los libros, archivos y progreso de lectura permanecen intactos.
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --console=plain
 ```
 
-Resultados finales: en validación. La prueba inicial del coordinador y lectores
-pasó antes de conectar UI/servicio. Actualizar este apartado con el árbol final.
+Código final `b814e93`: **PASS** local con JDK 21/SDK 36. El comando completo
+terminó en 1 min 32 s, 95 tareas (25 ejecutadas, 70 up-to-date): assembleDebug,
+testDebugUnitTest, lintDebug y assembleDebugAndroidTest. **73 pruebas**, 0 fallos,
+errores u omitidas. Incluyen 16 del coordinador, 2 del puente Android y 1 de
+migración v2→v3, además de regresión y traducción de offsets en los tres formatos.
+
+El primer intento detectó índices opcionales ausentes en el fixture del esquema
+Room y una advertencia de permiso de notificación. Se corrigió la reconstrucción
+del fixture; la excepción multimedia se documenta con una supresión localizada
+NotificationPermission únicamente para notificaciones MediaStyle con token de
+MediaSession. No se ocultan otros errores de lint ni se introduce un baseline.
+La firma debug del APK también se verificó. Los dispositivos físicos permanecen
+NOT_RUN; la compilación del test no equivale a escuchar una voz.
 
 Los tests del coordinador usan motores/focus sintéticos solo en test para comprobar
 orden, cancelación, voces de red rechazadas, callbacks atrasados, avance, pausa,
