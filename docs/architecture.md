@@ -329,3 +329,27 @@ puede terminar el proceso pausado: Room permite recuperación al volver a la app
 La interfaz muestra únicamente voces declaradas instaladas y sin red por el motor;
 una prueba física en modo avión sigue siendo necesaria. No se añadió SDK de nube,
 ExoPlayer ni dependencias de runtime nuevas; coroutines-test solo se usa en pruebas.
+
+## ADR-012 — Recuperación TTS y reproductor 0.4.1
+
+Se configura el listener/atributos de TextToSpeech después de onInit exitoso. La
+voz instalada seleccionada determina el modo de síntesis: se elimina el flag
+legacy embeddedTts, que puede entrar en conflicto con voces nombradas de motores
+actuales. Cada fragmento documental se envía en unidades contiguas de hasta 350
+caracteres, prefiriendo frases y conservando offsets UTF-16/surrogates. El resultado
+solo termina tras todos los callbacks; los eventos mantienen el ID de petición
+original. onStart confirma una frontera de texto cuando falta onRangeStart.
+
+El servicio conserva foreground mientras hay una orden pendiente, incluido el
+lookup de Room. El coordinador publica PREPARING antes de ese lookup y vuelve a
+comprobar cancelación antes de lanzar habla. No se publican actualizaciones sobre
+una MediaSession ya liberada. Se conserva el código de error real del motor para
+distinguir salida de audio, servicio, instalación, síntesis y red sin registrar el
+texto del libro. No se afirma que estos cambios reproduzcan/resuelvan por sí solos
+el fallo físico del usuario: aún requiere repetir la prueba en su teléfono.
+
+El reproductor separa tarjeta de libro/controles, voz/velocidad y ayuda desplegable.
+Escuchar/Pausar es la acción principal; los saltos dicen Parte anterior/siguiente.
+La selección de motor/voz ocurre en un diálogo y usa idioma/país/variante, sin IDs
+internos como etiquetas. Probar voz reproduce una frase explícita de comprobación
+mediante el mismo servicio; no abre documentos ni adelanta el bookmark del libro.

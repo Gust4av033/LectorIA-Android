@@ -83,3 +83,8 @@ Migración Room 2→3 conserva libros y ReadingProgress. Pruebas del coordinador
 puente SDK y migración: consultar testing-phase-c.md para resultados finales.
 Audio/Bluetooth/llamadas/pantalla apagada/batería requieren prueba física; no se
 atribuyen al agente ni a la confirmación del usuario sobre el lector EPUB.
+
+Seguimiento 0.4.1: el usuario reportó fallo de voz con Samsung/Google y confusión en
+los controles. Se implementa recuperación/inicialización TTS, protección de
+foreground y rediseño de reproductor con prueba de voz independiente. Evidencia y
+límites en testing-phase-c.md; no se declara corregido en hardware sin confirmación.

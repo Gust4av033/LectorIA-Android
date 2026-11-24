@@ -174,3 +174,12 @@ Pausa/reanudación, anterior/siguiente por fragmentos y controles multimedia est
 conectados al servicio de voz. El avance de escucha se guarda separado de lectura.
 Pasos de modo avión, pantalla apagada, Bluetooth y recuperación en
 [testing-phase-c.md](docs/testing-phase-c.md). Estas pruebas físicas siguen pendientes.
+
+### Actualización 0.4.1 del reproductor
+
+En la misma rama `feature/fase-c-voz-local`, hacer Pull/Update Project, Sync y Run
+sobre la instalación existente. **Probar voz** comprueba el motor sin leer el libro;
+**Escuchar/Pausar** es el botón central; **Parte anterior/siguiente** recorren texto.
+La selección de voz muestra idioma y país en un diálogo. El error de Android,
+cuando está disponible, muestra un motivo concreto para orientar la recuperación.
+Se conserva el libro y su avance; hace falta confirmar la voz en el teléfono.

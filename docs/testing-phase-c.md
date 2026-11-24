@@ -80,3 +80,30 @@ teléfono del propietario. LocalVoiceTest, en androidTest, pronuncia una sola fr
 sintética si existe una voz española offline; de lo contrario se omite con motivo.
 Ejecutarlo con el motor configurado y después en modo avión. No usa libros privados.
 Las pruebas conectadas de Fase B también siguen pendientes de ejecución del agente.
+
+## Corrección 0.4.1 — reporte del teléfono
+
+El usuario reportó error «El motor no pudo pronunciar este fragmento» con motores
+Samsung y Google, además de controles confusos. Se registra como USER_REPORTED de
+fallo de reproducción; no se considera validación física exitosa de Fase C.
+
+Se eliminó el flag legacy de síntesis, se ajustó el orden de inicialización y se
+acortaron las unidades enviadas a TTS conservando Unicode/posiciones. Se protege
+foreground durante preparación y se mantienen códigos SDK de error. Probar voz
+permite distinguir un problema del motor/salida de uno asociado al libro. Las
+pruebas del puente usan una fábrica estricta que exige ready, comprueban errores
+numéricos y múltiples callbacks/una sola finalización. La prueba del coordinador
+cubre pausa durante lookup y que la muestra no mueva el avance del libro.
+
+Nueva UI: tarjeta de libro, botón central Escuchar/Pausar con icono, saltos con
+nombre, voz en idioma/país, velocidad separada y ayuda/texto desplegables. Dos
+pruebas de Compose verifican acciones/etiquetas y selección sin IDs técnicos.
+Captura sintética revisada: app/build/reports/screenshots/player.png, sin versionar.
+
+Validación local final 0.4.1: **PASS**, 80 pruebas, 0 fallos/errores/omitidas.
+assembleDebug, testDebugUnitTest, lintDebug y assembleDebugAndroidTest: PASS,
+1 min 17 s, 95 tareas; lint 0 errores y 16 avisos. Captura revisada con texto claro
+y controles legibles. Después de actualizar desde Android
+Studio, usar primero Probar voz y luego Escuchar en el EPUB. Si aún falla, copiar
+el código específico que ahora devuelve el motor. La voz real sigue NOT_RUN por
+el agente; no hay acceso al USB/Android Studio del teléfono del propietario.

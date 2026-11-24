@@ -76,3 +76,9 @@ TTS instalado, controles, avance independiente y servicio multimedia implementad
 Estado de pruebas y pasos de teléfono: testing-phase-c.md. La validación de una
 sesión larga con pantalla apagada, Bluetooth, llamada y ahorro de batería sigue
 pendiente; no se declara DONE por compilar o pasar Robolectric.
+
+### Revisión de Fase C — 0.4.1
+
+El primer intento físico de TTS falló según el usuario. Correcciones de arranque,
+solicitud TTS, diagnóstico y controles implementadas en la misma rama/PR #4.
+Repetir prueba de voz y EPUB en teléfono antes de avanzar a IA u otra fase.
