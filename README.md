@@ -192,3 +192,18 @@ distingue conexión/espera de voz iniciada. Se prefiere la voz predeterminada de
 Android cuando sea española y offline. Actualizar con Pull, Sync y Run en la rama
 actual y probar la muestra antes del EPUB. **Copiar diagnóstico** excluye el libro.
 Validación local: 94 pruebas y build PASS; sonido real pendiente de repetir.
+
+### Lectura sincronizada y diseño 0.5.0
+
+Actualización en `feature/lectura-sincronizada`: cambiar a esa rama en Android
+Studio, actualizar proyecto, Sync y Run en el teléfono sin desinstalar.
+Desde el reproductor, **Ver libro** mantiene la escucha y muestra un recuadro en el
+texto narrado. **Siguiendo la voz** permite desactivarlo; navegar manualmente
+suspende el seguimiento y **Volver a la voz** recupera la posición actual.
+En PDF, la sincronización se muestra sobre el texto extraído.
+
+En **Ajustes de voz → Interpretación**, elegir **Narrativa** o **Expresiva**, probar
+la voz y continuar la escucha. Ajustan tono, ritmo y pausas; la calidad depende del
+motor instalado. La app usa ahora un diseño oscuro neutro, con texto marfil y
+superficies opacas. No se generan archivos de audio ni se añaden servicios cloud.
+Validación y límites: [testing-reader-sync.md](docs/testing-reader-sync.md).

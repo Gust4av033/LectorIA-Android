@@ -1,5 +1,9 @@
 # Voz local — validación y prueba en teléfono
 
+**24/11/2026, actualización:** el usuario confirmó que la voz ya se escucha tras
+0.4.2 (USER_REPORTED). No equivale a instrumentación ejecutada por el agente ni
+acredita Bluetooth/pantalla apagada. Extensión siguiente: `testing-reader-sync.md`.
+
 Rama `feature/fase-c-voz-local`, versión 0.4.0. El usuario confirmó el funcionamiento
 de la lectura EPUB de Fase B. Esa confirmación es USER_REPORTED y no acredita aún
 TTS, Bluetooth, llamadas ni PDFs nativos.
