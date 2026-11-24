@@ -82,3 +82,11 @@ pendiente; no se declara DONE por compilar o pasar Robolectric.
 El primer intento físico de TTS falló según el usuario. Correcciones de arranque,
 solicitud TTS, diagnóstico y controles implementadas en la misma rama/PR #4.
 Repetir prueba de voz y EPUB en teléfono antes de avanzar a IA u otra fase.
+
+### Revisión 0.4.2
+
+Se corrige la cola SDK que podía cancelar la carga de voz, se sustituye la conexión
+fallida con un reintento limitado y se añaden estados de conexión/diagnóstico.
+La muestra del sistema sí funciona según el usuario; la app requiere nueva prueba
+física después de actualizar. Build y 94 tests locales PASS. No avanzar a Fase D
+hasta validar la escucha real de esta entrega.

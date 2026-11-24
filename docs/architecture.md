@@ -353,3 +353,39 @@ Escuchar/Pausar es la acción principal; los saltos dicen Parte anterior/siguien
 La selección de motor/voz ocurre en un diálogo y usa idioma/país/variante, sin IDs
 internos como etiquetas. Probar voz reproduce una frase explícita de comprobación
 mediante el mismo servicio; no abre documentos ni adelanta el bookmark del libro.
+
+## ADR-013 — Cola de voz y recuperación del servicio (0.4.2)
+
+La lectura del código AOSP confirma que setVoice llama loadVoice, que encola un
+LoadVoiceItem con QUEUE_ADD. speak con QUEUE_FLUSH llama stopForApp y puede
+cancelar ese LoadVoiceItem todavía pendiente. El adaptador ahora detiene la sesión
+anterior antes de seleccionar la voz y usa QUEUE_ADD al hablar, manteniendo carga
+→ síntesis. Solo hay una petición de habla en curso y se espera cada onDone, por lo
+que no se acumula reproducción ni se pierde la cancelación explícita.
+
+Fuente consultada: TextToSpeechService.java de AOSP,
+https://github.com/aosp-mirror/platform_frameworks_base/blob/main/core/java/android/speech/tts/TextToSpeechService.java
+(blob a00d8cfb36f75fbd9f437fd6bf5b858e9819cdeb), junto con setVoice de
+TextToSpeech.java. Un test del adaptador Android inspecciona queueMode mediante
+ShadowTextToSpeech; no se limita a un motor simulado detrás de la interfaz.
+
+ERROR_SERVICE (-4) significa fallo del servicio, no demuestra por sí solo una
+pérdida de conexión. Se descarta el cliente fallido y se permite como máximo una
+reconexión automática por petición. Solo se repite la unidad que no haya tenido
+onStart/onRangeStart; después de inicio confirmado se devuelve el fallo para no
+duplicar voz. Cada conexión tiene generación e IDs de reintento distintos: los
+callbacks del cliente anterior no terminan la petición nueva. Un binder inválido
+al consultar voces también se sustituye. Cancelar durante los 300 ms de espera
+impide el reintento; no hay fallback silencioso a otro motor ni voz de red.
+
+Cada unidad tiene un timeout de 120 segundos y una inicialización de 10 segundos.
+Reconectar voz es una acción explícita que libera/recrea el cliente y devuelve la
+app a pausa, conservando libro y bookmark. La voz predeterminada inicial del SDK
+se prefiere si es española, instalada y offline; una selección explícita guardada
+se respeta. La UI permite elegir esa voz de Android directamente tras un fallo.
+
+La UI distingue conectar/esperar/inicio confirmado/reconectar/fallo. PLAYING
+interno mantiene el servicio activo, pero no muestra «Leyendo» antes del callback
+Started. Copiar diagnóstico incluye versión, SDK, motor, voz, fase y código; excluye
+libro, título, ruta y texto. No se usa audio en disco ni se requieren dependencias
+nuevas. La corrección física debe volver a comprobarse en el teléfono.

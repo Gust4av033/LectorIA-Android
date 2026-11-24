@@ -88,3 +88,9 @@ Seguimiento 0.4.1: el usuario reportó fallo de voz con Samsung/Google y confusi
 los controles. Se implementa recuperación/inicialización TTS, protección de
 foreground y rediseño de reproductor con prueba de voz independiente. Evidencia y
 límites en testing-phase-c.md; no se declara corregido en hardware sin confirmación.
+
+0.4.2: AOSP y la prueba del adaptador verifican preservación de LoadVoiceItem al
+usar QUEUE_ADD. Recuperación limitada del -4, timeout, confirmación por callback,
+voz predeterminada offline y reconexión manual implementados. 94 pruebas locales
+PASS; el usuario confirma voz audible en ajustes de Android y fallo en la app.
+Repetición de la prueba física tras esta corrección: pendiente.

@@ -107,3 +107,29 @@ y controles legibles. Después de actualizar desde Android
 Studio, usar primero Probar voz y luego Escuchar en el EPUB. Si aún falla, copiar
 el código específico que ahora devuelve el motor. La voz real sigue NOT_RUN por
 el agente; no hay acceso al USB/Android Studio del teléfono del propietario.
+
+## 0.4.2 — servicio TTS y prueba del propio Android
+
+El usuario confirma que Probar voz también falla sin libro, mientras que el ejemplo
+del sistema Android sí se escucha. El fallo queda acotado a la integración de la
+app; no es evidencia de un EPUB defectuoso. Esto sigue siendo USER_REPORTED.
+
+Se corrige el uso de QUEUE_FLUSH que podía descartar la carga encolada de la voz.
+Un test llama al adaptador Android y verifica QUEUE_ADD en el SDK mediante
+Robolectric. Se añaden pruebas de recuperación única antes de inicio, no repetición
+tras inicio, cancelación durante reconexión, callbacks viejos, binder inválido,
+timeout y preferencia por la voz española offline predeterminada de Android.
+También se verifican recuperación manual sin autoplay/avance y diagnóstico sin
+contenido privado. La UI distingue espera de inicio confirmado y ofrece Reconectar.
+
+Validación local final: **94 pruebas, 0 fallos/errores/omitidas**. assembleDebug,
+testDebugUnitTest, lintDebug y assembleDebugAndroidTest: **PASS**, 1m47s, 95 tareas.
+Lint: 0 errores y 16 avisos. Sin cambios de esquema/datos ni librerías de runtime.
+No hay dispositivo conectado al agente: la corrección no se declara verificada
+en hardware ni se atribuye voz audible a los tests JVM.
+
+Actualizar la misma instalación desde Android Studio (rama feature/fase-c-voz-local,
+Pull, Sync y Run), comprobar 0.4.2 y usar Probar voz. Después probar el EPUB.
+Si continúa el fallo: Reconectar voz; Usar voz de Android si se ofrece; Probar voz.
+Copiar diagnóstico permite informar del error sin compartir el libro. Repetir luego
+modo avión/pantalla apagada/Bluetooth cuando la muestra ya sea audible.

@@ -183,3 +183,12 @@ sobre la instalación existente. **Probar voz** comprueba el motor sin leer el l
 La selección de voz muestra idioma y país en un diálogo. El error de Android,
 cuando está disponible, muestra un motivo concreto para orientar la recuperación.
 Se conserva el libro y su avance; hace falta confirmar la voz en el teléfono.
+
+### Corrección de voz 0.4.2
+
+La voz se carga antes de encolar el habla, se recupera una vez un fallo de servicio
+antes del inicio y se ofrece **Reconectar voz** sin perder avance. La pantalla
+distingue conexión/espera de voz iniciada. Se prefiere la voz predeterminada de
+Android cuando sea española y offline. Actualizar con Pull, Sync y Run en la rama
+actual y probar la muestra antes del EPUB. **Copiar diagnóstico** excluye el libro.
+Validación local: 94 pruebas y build PASS; sonido real pendiente de repetir.
