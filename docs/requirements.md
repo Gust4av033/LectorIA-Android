@@ -73,3 +73,13 @@ modelo ni ejecución de la suite instrumentada.
 Estado exacto de ejecución y límites de formato: `testing-phase-b.md` y
 `architecture.md` ADR-009/010. La implementación visual PDF y el reinicio real
 en teléfono no se declaran DONE a partir de Robolectric.
+
+## Fase C — Voz local implementada, en validación
+
+Motor/voz/velocidad reales, entrada desde lector, reproductor y ajustes conectados,
+pausa/reanudación textual, avance de escucha independiente, servicio foreground,
+MediaSession/notificación, foco de audio y pausa por desconexión implementados.
+Migración Room 2→3 conserva libros y ReadingProgress. Pruebas del coordinador,
+puente SDK y migración: consultar testing-phase-c.md para resultados finales.
+Audio/Bluetooth/llamadas/pantalla apagada/batería requieren prueba física; no se
+atribuyen al agente ni a la confirmación del usuario sobre el lector EPUB.

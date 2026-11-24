@@ -67,3 +67,12 @@ Fase C, voz local real y recuperación textual, dentro de su alcance separado.
   rendimiento y fuentes. PDFs muy complejos pueden superar los límites de memoria.
 - Robolectric no sustituye GPU, TalkBack, gestos, ventanas y dispositivos físicos.
 - No hay backend, permisos de envío de texto ni proveedores de pago configurados.
+
+## Fase C — Voz local (continuación)
+
+Rama feature/fase-c-voz-local, basada en Fase B (PR #3 pendiente de integración al
+comenzar). El usuario confirmó lectura EPUB en su teléfono: USER_REPORTED.
+TTS instalado, controles, avance independiente y servicio multimedia implementados.
+Estado de pruebas y pasos de teléfono: testing-phase-c.md. La validación de una
+sesión larga con pantalla apagada, Bluetooth, llamada y ahorro de batería sigue
+pendiente; no se declara DONE por compilar o pasar Robolectric.

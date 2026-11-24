@@ -1,5 +1,8 @@
 # Arquitectura implementada y decisiones — Fase 0
 
+Estado actual: consultar ADR-011 para voz local; las decisiones anteriores se
+conservan como historial de las fases previas.
+
 Fecha: 23/11/2026. Fuente de requisitos: `MASTER_PLAN.md` v1.0, conservado sin cambios.
 
 ## ADR-001 — Un módulo y separación lógica
@@ -294,3 +297,35 @@ Una ubicación corrupta/no compatible no se reemplaza silenciosamente con cero:
 se informa del error y, si la sesión abrió, el usuario puede elegir otra sección.
 Se rechazan escrituras a libros ausentes/no READY y updates anteriores a la
 fecha ya guardada. La pestaña Lector elige el libro READY de lectura más reciente.
+
+## ADR-011 — Voz local y posición de escucha
+
+Android TextToSpeech se encapsula en LocalNarrationEngine. Sus eventos incluyen
+identidad de utterance: un callback viejo no modifica la sesión nueva. El puente
+espera onDone/error, valida voz offline instalada y no confunde encolar con terminar.
+La inicialización tiene timeout, la cancelación detiene habla y shutdown libera el
+motor. El motor real determina calidad/idioma y puede carecer de rangos por palabra.
+
+NarrationCoordinator coordina un único hablante, conserva fronteras de texto y
+cierra sesiones documentales al pausar. Los callbacks se confinan a Main; operaciones
+canceladas y guardados atrasados no reemplazan la petición más reciente. El avance
+usa locators del adaptador, separados de ReadingProgress en Room v3. No se crea audio
+sintetizado en disco. Los detalles de tolerancia están en testing-phase-c.md.
+
+LocalNarrationService es un foreground service mediaPlayback con MediaSession de
+Android, notificación MediaStyle privada, audio focus de tipo SPEECH y wake lock
+parcial con timeout renovado solo durante preparación/habla. Pierde foreground y
+wake lock al pausar. Recepciona AUDIO_BECOMING_NOISY; no requiere leer dispositivos
+Bluetooth ni llamadas. Focus loss/ducking pausa; focus gain no inicia sonido. No hay
+seek temporal ni duración inventada. Media3 queda para archivos de audio de Fase D:
+esta voz es LiveSpeech y utiliza su controlador propio según el documento maestro.
+
+Permisos nuevos: FOREGROUND_SERVICE, FOREGROUND_SERVICE_MEDIA_PLAYBACK y WAKE_LOCK.
+La notificación asociada con MediaSession tiene la excepción multimedia de Android
+13 a POST_NOTIFICATIONS; no se añade un diálogo de permiso para ella. El servicio
+es privado y START_NOT_STICKY; no reproduce tras boot/reinicio por su cuenta. Android
+puede terminar el proceso pausado: Room permite recuperación al volver a la app.
+
+La interfaz muestra únicamente voces declaradas instaladas y sin red por el motor;
+una prueba física en modo avión sigue siendo necesaria. No se añadió SDK de nube,
+ExoPlayer ni dependencias de runtime nuevas; coroutines-test solo se usa en pruebas.
