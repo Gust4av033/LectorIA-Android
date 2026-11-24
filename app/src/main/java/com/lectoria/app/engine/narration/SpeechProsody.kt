@@ -7,25 +7,61 @@ import java.util.Locale
 internal data class SpeechProsody(val pitch: Float, val rate: Float, val pauseMs: Long)
 
 internal fun speechProsody(text: String, rate: Float, delivery: SpeechDelivery): SpeechProsody {
-    val ending = text.trimEnd { it.isWhitespace() || it in "\"'»”’)]}" }.lastOrNull()
+    val trimmed = text.trimEnd()
+    val paragraphBreak = text.endsWith("\n\n")
+    val ending = trimmed.trimEnd { it in "\"'»”’)]}" }.lastOrNull()
+    val pause = when (ending) {
+        '?' -> 170L
+        '!' -> 210L
+        '.', '…' -> 145L
+        ';', ':' -> 105L
+        ',' -> 45L
+        else -> 0L
+    }.let { if (paragraphBreak) maxOf(it, 320L) else it }
     return when (delivery) {
         SpeechDelivery.STANDARD -> SpeechProsody(1f, rate, 0)
-        SpeechDelivery.NARRATIVE -> SpeechProsody(if (ending == '?') 1.04f else 0.98f, (rate * 0.95f).coerceIn(0.5f, 2f), if (ending in listOf('.', '!', '?')) 180 else 60)
-        SpeechDelivery.LIVELY -> SpeechProsody(when (ending) { '?' -> 1.09f; '!' -> 1.06f; else -> 1.01f }, (rate * 1.03f).coerceIn(0.5f, 2f), if (ending in listOf('.', '!', '?')) 90 else 40)
+        SpeechDelivery.NARRATIVE -> SpeechProsody(
+            pitch = when (ending) { '?' -> 1.025f; '!' -> 0.99f; else -> 0.98f },
+            rate = (rate * 0.94f).coerceIn(0.5f, 2f),
+            pauseMs = pause,
+        )
+        SpeechDelivery.LIVELY -> SpeechProsody(
+            pitch = when (ending) { '?' -> 1.055f; '!' -> 1.045f; else -> 1.01f },
+            rate = (rate * 1.02f).coerceIn(0.5f, 2f),
+            pauseMs = (pause * 0.72f).toLong(),
+        )
     }
 }
 
-/** Spoken text remains unchanged; sentence splitting never changes locators. */
-internal fun deliveryParts(text: String, delivery: SpeechDelivery): List<String> {
+/** Splits by locale and punctuation without altering spoken text or source offsets. */
+internal fun deliveryParts(text: String, delivery: SpeechDelivery, languageTag: String = "es"): List<String> {
     if (delivery == SpeechDelivery.STANDARD) return speechParts(text)
-    val boundaries = BreakIterator.getSentenceInstance(Locale.forLanguageTag("es")).apply { setText(text) }
+    val locale = Locale.forLanguageTag(languageTag).takeUnless { it.language.isBlank() } ?: Locale.forLanguageTag("es")
+    val boundaries = BreakIterator.getSentenceInstance(locale).apply { setText(text) }
     val result = mutableListOf<String>()
     var start = boundaries.first()
     var end = boundaries.next()
     while (end != BreakIterator.DONE) {
-        result += speechParts(text.substring(start, end))
+        result += prosodicParts(text.substring(start, end))
         start = end
         end = boundaries.next()
+    }
+    return result
+}
+
+private fun prosodicParts(text: String): List<String> {
+    val result = mutableListOf<String>()
+    var offset = 0
+    while (offset < text.length) {
+        val pauseBoundary = (offset + 28 until minOf(offset + 350, text.length))
+            .firstOrNull { text[it] in ",;:" }
+        val end = if (pauseBoundary != null) {
+            pauseBoundary + 1
+        } else {
+            offset + speechParts(text.substring(offset)).first().length
+        }
+        result += text.substring(offset, end)
+        offset = end
     }
     return result
 }

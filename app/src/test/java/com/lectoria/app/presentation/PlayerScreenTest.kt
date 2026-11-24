@@ -63,6 +63,7 @@ class PlayerScreenTest {
         compose.onNodeWithContentDescription("Parte siguiente").performClick()
         assertTrue(next)
         compose.onNodeWithText("Lectura y memoria").assertIsDisplayed()
+        compose.onNodeWithTag("player_section_progress").assertIsDisplayed()
         val output = File("build/reports/screenshots/player.png").apply { parentFile!!.mkdirs() }
         val bitmap = compose.runOnIdle {
             val view = compose.activity.window.decorView
@@ -78,6 +79,7 @@ class PlayerScreenTest {
         compose.onAllNodesWithText("Español · México").onLast().performClick()
         assertEquals(voice.id, selected)
         compose.onNodeWithText(voice.id).assertDoesNotExist()
+        compose.onNodeWithText("Voz offline · calidad variable según el motor").assertExists()
         assertTrue(engineFailureText(SpeechFailure.ENGINE, -5).contains("salida de audio"))
     }
 }

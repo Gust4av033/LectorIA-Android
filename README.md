@@ -207,3 +207,17 @@ la voz y continuar la escucha. Ajustan tono, ritmo y pausas; la calidad depende 
 motor instalado. La app usa ahora un diseño oscuro neutro, con texto marfil y
 superficies opacas. No se generan archivos de audio ni se añaden servicios cloud.
 Validación y límites: [testing-reader-sync.md](docs/testing-reader-sync.md).
+
+### Refinamiento UI y narración local — VS Code Copilot
+
+La rama **`feature/ui-pro-vscode-copilot`** parte de la última entrega de UI/lector
+sincronizado (`9a38e2a`). Refina la biblioteca y el reproductor con portadas,
+tarjetas y controles centrados en la parte/sección real, sin inventar duración
+para el TTS. La narración usa el locale de la voz instalada para separar frases y
+modula pausas, puntuación, ritmo y tono de forma moderada.
+
+En Voz de lectura puedes ver la calidad indicada por Android y abrir los ajustes
+del sistema para descargar/mejorar voces sin conexión si tu motor las ofrece.
+Esto no crea una voz nueva: la calidad real depende del teléfono y del paquete de
+voz. La app no añade pagos, servicios cloud ni sube libros. Pruebas y limitaciones
+actuales: [testing-reader-sync.md](docs/testing-reader-sync.md).

@@ -425,3 +425,26 @@ Cambiar interpretación pausa y requiere continuar explícitamente, igual que vo
 velocidad. La muestra usa ese mismo perfil. Esto no crea una voz neuronal ni una
 actuación emocional: la calidad y el soporte dependen del motor instalado.
 No se introduce red, proveedor cloud, almacenamiento de audio ni cambio de Room.
+
+## ADR-015 — Refinamiento visual y prosodia local (VS Code Copilot)
+
+La rama `feature/ui-pro-vscode-copilot` parte del commit `9a38e2a` de la rama
+`feature/ui-dark-pro`, que coincide con la entrega de lectura sincronizada. La
+biblioteca refuerza jerarquía, tarjetas, portada y etiqueta de formato. El
+reproductor centra portada, título, estado, sección, navegación por partes y
+acciones principales. La barra representa únicamente la parte actual dentro de
+la sección; no es una duración ni una posición temporal del audio TTS.
+
+Los ajustes muestran voces instaladas/offline y su nivel de calidad declarado por
+Android, con acceso directo a la configuración del sistema para instalar o mejorar
+voces disponibles. La narración usa la configuración actual del motor TTS local:
+el locale de la voz seleccionada para fragmentar frases y cláusulas, pausas por
+puntuación de frase/cláusula y párrafo, y variación moderada de ritmo/tono para
+Narrativa/Expresiva.
+Los perfiles estándar mantienen la prosodia del motor. El texto y los offsets no
+se alteran. No se descargan modelos/paquetes desde la app, no se promete una voz
+premium gratuita, y no se integra un proveedor cloud ni una API de pago.
+
+La mejora percibida depende del motor y de las voces instaladas en cada Android.
+Antes de declarar calidad de voz o accesibilidad verificadas, se requiere prueba
+auditiva en los motores del dispositivo de destino.

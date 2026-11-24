@@ -1,14 +1,29 @@
 package com.lectoria.app.presentation.player
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -19,6 +34,8 @@ import com.lectoria.app.domain.narration.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @HiltViewModel
@@ -55,42 +72,73 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
     var help by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 22.dp)
         .testTag(if (settingsOnly) "screen_settings" else "screen_player"), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        Text(if (settingsOnly) "Ajustes de voz" else "Reproductor", style = MaterialTheme.typography.headlineLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(if (settingsOnly) "PERSONALIZA TU ESCUCHA" else "TU ESPACIO DE AUDIO",
+                style = MaterialTheme.typography.labelSmall, color = Midnight.Highlight)
+            Text(if (settingsOnly) "Ajustes de voz" else "Reproductor", style = MaterialTheme.typography.headlineLarge)
+        }
         if (!settingsOnly) {
             com.lectoria.app.presentation.screens.GlassCard {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Icon(androidx.compose.ui.res.painterResource(com.lectoria.app.R.drawable.ic_reader), null,
-                        Modifier.size(40.dp), tint = Midnight.Highlight)
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    PlayerArtwork(state.book?.coverPath)
                     Text(state.book?.title ?: "Tu próxima lectura", style = MaterialTheme.typography.headlineSmall,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3)
-                    state.book?.author?.let { Text(it, color = Midnight.MutedText) }
-                    Text(playerStatus(state), Modifier.testTag("speech_status"), color = Midnight.Highlight)
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2)
+                    state.book?.author?.let { Text(it, color = Midnight.MutedText, maxLines = 1) }
+                    Surface(shape = RoundedCornerShape(50), color = Midnight.Container.copy(alpha = 0.55f)) {
+                        Text(playerStatus(state), Modifier.padding(horizontal = 13.dp, vertical = 7.dp).testTag("speech_status"),
+                            color = Midnight.Highlight, style = MaterialTheme.typography.labelMedium)
+                    }
                     if (state.book != null) {
-                        if (state.sectionCount > 0) Text("Sección ${state.sectionIndex + 1} de ${state.sectionCount} · Parte ${state.fragmentIndex + 1} de ${state.fragmentCount}",
-                            style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        if (state.sectionCount > 0) {
+                            Text(state.sectionTitle?.takeIf { it.isNotBlank() } ?: "Sección ${state.sectionIndex + 1} de ${state.sectionCount}",
+                                style = MaterialTheme.typography.labelLarge, color = Midnight.MutedText, maxLines = 1)
+                            Text("Parte ${state.fragmentIndex + 1} de ${state.fragmentCount}",
+                                style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                            val sectionProgress = ((state.fragmentIndex + 1).toFloat() / state.fragmentCount.coerceAtLeast(1)).coerceIn(0f, 1f)
+                            Box(
+                                Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp))
+                                    .background(Midnight.Container)
+                                    .semantics {
+                                        contentDescription = "Avance de la sección"
+                                        progressBarRangeInfo = ProgressBarRangeInfo(sectionProgress, 0f..1f)
+                                    }
+                                    .testTag("player_section_progress"),
+                            ) {
+                                Box(Modifier.fillMaxWidth(sectionProgress).fillMaxHeight().background(Midnight.Highlight))
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceEvenly) {
                             Transport(com.lectoria.app.R.drawable.ic_speech_back, "Parte anterior", state.hasPrevious && !state.loadingVoices, actions.previous)
-                            LectorButton(onClick = if (state.active) actions.pause else actions.play,
+                            FilledIconButton(
+                                onClick = if (state.active) actions.pause else actions.play,
                                 enabled = state.active || (state.voice != null && !state.loadingVoices),
-                                modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("speech_play")) {
-                                Icon(androidx.compose.ui.res.painterResource(if (state.active) com.lectoria.app.R.drawable.ic_speech_pause else com.lectoria.app.R.drawable.ic_speech_play), null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (state.active) "Pausar" else if (state.phase == SpeechPhase.COMPLETED) "Repetir libro" else "Escuchar")
+                                modifier = Modifier.size(68.dp).testTag("speech_play"),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = Midnight.Highlight,
+                                    contentColor = Midnight.Background,
+                                ),
+                            ) {
+                                Icon(
+                                    androidx.compose.ui.res.painterResource(if (state.active) com.lectoria.app.R.drawable.ic_speech_pause else com.lectoria.app.R.drawable.ic_speech_play),
+                                    contentDescription = if (state.active) "Pausar lectura" else "Escuchar",
+                                    modifier = Modifier.size(28.dp),
+                                )
                             }
                             Transport(com.lectoria.app.R.drawable.ic_speech_next, "Parte siguiente", state.hasNext && !state.loadingVoices, actions.next)
                         }
-                        Text("Anterior y siguiente cambian de parte del texto.", style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                             LectorTextButton(onClick = actions.stop, enabled = state.active || state.phase == SpeechPhase.PAUSED) { Text("Finalizar escucha") }
                             LectorTextButton(onClick = actions.read) { Text("Ver libro") }
                         }
                     } else {
-                        Text("Abre un libro para empezar a escucharlo.", color = Midnight.MutedText)
-                        LectorButton(onClick = actions.library) { Text("Elegir un libro") }
+                        Text("Tu biblioteca está a un toque. Elige un libro para iniciar una escucha privada y sin conexión.",
+                            color = Midnight.MutedText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        LectorButton(onClick = actions.library, modifier = Modifier.fillMaxWidth()) { Text("Explorar biblioteca") }
                     }
                 }
             }
@@ -116,7 +164,10 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
         if (state.saveFailed) Text("El avance aún no pudo guardarse. Pausa la lectura para reintentar.", color = MaterialTheme.colorScheme.error)
         com.lectoria.app.presentation.screens.GlassCard {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Voz de lectura", style = MaterialTheme.typography.titleMedium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Voz de lectura", style = MaterialTheme.typography.titleMedium)
+                    Text("TTS LOCAL", style = MaterialTheme.typography.labelSmall, color = Midnight.Highlight)
+                }
                 Text(when {
                     state.reconnectingVoice -> "Reconectando con el motor…"
                     state.loadingVoices || state.phase == SpeechPhase.PREPARING -> "Conectando…"
@@ -128,6 +179,7 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                 }, color = if (state.failure != null) MaterialTheme.colorScheme.error else Midnight.Highlight,
                     style = MaterialTheme.typography.labelLarge, modifier = Modifier.testTag("voice_connection"))
                 Text(state.voice?.let { friendlyVoice(it, state.catalog.voices) } ?: "Elige una voz en español", style = MaterialTheme.typography.titleLarge)
+                state.voice?.let { Text(voiceQualityLabel(it.quality), color = Midnight.MutedText, style = MaterialTheme.typography.bodySmall) }
                 Text(state.catalog.engines.firstOrNull { it.id == state.settings.engineId }?.label ?: "Configura el motor de voz", color = Midnight.MutedText)
                 Row {
                     LectorTextButton(onClick = { voiceDialog = true }, modifier = Modifier.testTag("change_voice")) { Text("Cambiar voz") }
@@ -142,21 +194,35 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                     LectorTextButton(onClick = { actions.rate((state.settings.rate + 0.1f).coerceAtMost(2f)) }, enabled = state.settings.rate < 2f) { Text("Más rápida") }
                 }
                 HorizontalDivider(color = Midnight.MutedText.copy(alpha = 0.2f))
-                Text("Interpretación", style = MaterialTheme.typography.titleMedium)
+                Text("Estilo de narración", style = MaterialTheme.typography.titleMedium)
                 SpeechDelivery.entries.forEach { delivery ->
-                    LectorTextButton(onClick = { actions.delivery(delivery) }, modifier = Modifier.fillMaxWidth().testTag("delivery_${delivery.name}")) {
-                        RadioButton(selected = state.settings.delivery == delivery, onClick = null)
-                        Column(Modifier.weight(1f)) {
+                    val selected = state.settings.delivery == delivery
+                    Surface(
+                        onClick = { actions.delivery(delivery) },
+                        modifier = Modifier.fillMaxWidth().testTag("delivery_${delivery.name}"),
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (selected) Midnight.Container.copy(alpha = 0.55f) else Midnight.Background,
+                        border = BorderStroke(1.dp, if (selected) Midnight.Highlight.copy(alpha = 0.42f) else Midnight.MutedText.copy(alpha = 0.16f)),
+                    ) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = selected, onClick = null)
+                            Column(Modifier.weight(1f).padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(when (delivery) { SpeechDelivery.STANDARD -> "Natural"; SpeechDelivery.NARRATIVE -> "Narrativa"; SpeechDelivery.LIVELY -> "Expresiva" })
                             Text(when (delivery) {
-                                SpeechDelivery.STANDARD -> "La entonación original de tu voz"
-                                SpeechDelivery.NARRATIVE -> "Ritmo sereno y pausas entre frases"
-                                SpeechDelivery.LIVELY -> "Más contraste en preguntas y exclamaciones"
+                                SpeechDelivery.STANDARD -> "Conserva el ritmo propio de la voz"
+                                SpeechDelivery.NARRATIVE -> "Ritmo pausado y puntuación más marcada"
+                                SpeechDelivery.LIVELY -> "Más energía con pausas breves"
                             }, style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                            }
                         }
                     }
                 }
-                Text("Ajusta tono, ritmo y pausas. El resultado depende de la voz instalada.", style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                Text("Los perfiles ajustan el motor TTS instalado; no generan una voz nueva. La calidad y el soporte offline dependen de Android.",
+                    style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                LectorTextButton(onClick = {
+                    try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
+                    catch (_: android.content.ActivityNotFoundException) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+                }) { Text("Instalar o mejorar voces en Android") }
             }
         }
         if (state.preview.isNotBlank() && !settingsOnly) {
@@ -165,12 +231,8 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
         }
         LectorTextButton(onClick = { help = !help }) { Text(if (help) "Cerrar ayuda" else "Ayuda con la voz") }
         if (help || settingsOnly) {
-            Text("Cambiar la voz, velocidad o interpretación pausa la escucha. Pulsa Escuchar para continuar. La pausa retoma la última palabra indicada por el motor; algunos motores repiten parte del texto.", color = Midnight.MutedText)
+            Text("Cambiar la voz, velocidad o interpretación pausa la escucha. Pulsa Escuchar para continuar. La pausa retoma la última posición indicada por el motor; algunos motores pueden repetir parte del texto.", color = Midnight.MutedText)
             LectorTextButton(onClick = actions.refresh, enabled = !state.active && !state.loadingVoices) { Text("Actualizar voces instaladas") }
-            LectorTextButton(onClick = {
-                try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
-                catch (_: android.content.ActivityNotFoundException) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-            }) { Text("Abrir ajustes de voz de Android") }
         }
     }
     if (voiceDialog) AlertDialog(onDismissRequest = { voiceDialog = false }, title = { Text("Elige cómo escuchar") }, text = {
@@ -185,11 +247,22 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
             item { Text("Voces instaladas · sin Internet", style = MaterialTheme.typography.labelLarge) }
             val voices = state.catalog.voices.filter { it.offline && it.installed }
             if (state.loadingVoices) item { Text("Cargando voces…"); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            if (voices.isEmpty() && !state.loadingVoices) item { Text("No hay voces listas. Abre los ajustes de Android para instalar una voz y después actualiza la lista.") }
+            if (voices.isEmpty() && !state.loadingVoices) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("No hay voces listas. Instala una voz española sin conexión y actualiza la lista.")
+                    LectorTextButton(onClick = {
+                        try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
+                        catch (_: android.content.ActivityNotFoundException) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+                    }) { Text("Abrir ajustes de voz") }
+                }
+            }
             items(voices.size) { index -> val voice = voices[index]
                 LectorTextButton(onClick = { actions.voice(voice.id); voiceDialog = false }, enabled = !state.loadingVoices, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = state.settings.voiceId == voice.id, onClick = null)
-                    Text(friendlyVoice(voice, state.catalog.voices), Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(friendlyVoice(voice, state.catalog.voices))
+                        Text(voiceQualityLabel(voice.quality), style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                    }
                 }
             }
         }
@@ -198,13 +271,41 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
 }
 
 @Composable
+private fun PlayerArtwork(path: String?) {
+    val bitmap by produceState<Bitmap?>(null, path) {
+        value = path?.let { filePath -> withContext(Dispatchers.IO) { BitmapFactory.decodeFile(filePath) } }
+    }
+    val image = bitmap
+    Surface(
+        modifier = Modifier.size(width = 132.dp, height = 166.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = Midnight.Container,
+        border = BorderStroke(1.dp, Midnight.Highlight.copy(alpha = 0.28f)),
+    ) {
+        if (image == null) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(androidx.compose.ui.res.painterResource(com.lectoria.app.R.drawable.ic_reader), null,
+                    Modifier.size(48.dp), tint = Midnight.Highlight)
+            }
+        } else Image(image.asImageBitmap(), contentDescription = "Portada del libro", contentScale = ContentScale.Crop)
+    }
+}
+
+@Composable
 private fun Transport(icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
-    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
         FilledTonalIconButton(onClick, enabled = enabled, modifier = Modifier.size(48.dp)) {
             Icon(androidx.compose.ui.res.painterResource(icon), contentDescription = label)
         }
         Text(label, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
+}
+
+internal fun voiceQualityLabel(quality: Int): String = when {
+    quality >= 500 -> "Calidad muy alta · indicada por Android"
+    quality >= 400 -> "Calidad alta · indicada por Android"
+    quality >= 300 -> "Calidad estándar · indicada por Android"
+    else -> "Voz offline · calidad variable según el motor"
 }
 
 internal fun friendlyVoice(voice: SpeechVoice, all: List<SpeechVoice>): String {

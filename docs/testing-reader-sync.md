@@ -80,3 +80,31 @@ establece superficie y color de contenido raíz explícitos; la captura final
 muestra texto marfil legible sobre negro. Se captura antes de los toques para
 excluir estados transitorios de ripple; las acciones de pausa y seguimiento se
 comprueban después. No se usa una imagen generada como evidencia de UI.
+
+## Refinamiento UI y prosodia local — `feature/ui-pro-vscode-copilot`
+
+Base: commit `9a38e2a`, tip de `feature/ui-dark-pro`. Cambios: portada y jerarquía
+de reproducción, estado y navegación por parte/sección, tarjetas de biblioteca,
+calidad declarada de voz y acceso a ajustes TTS de Android. La barra del reproductor
+indica el fragmento actual dentro de la sección; no representa tiempo de audio.
+Las voces siguen siendo las que instala/provee Android, sin backend, costo de API
+ni modelos nuevos.
+
+Validación en Windows, JDK 21:
+
+| Comprobación | Resultado |
+|---|---|
+| `:app:testDebugUnitTest --tests 'com.lectoria.app.engine.LocalNarrationEngineTest' --tests 'com.lectoria.app.presentation.PlayerScreenTest'` | PASS, 20 pruebas |
+| `:app:assembleDebug` | PASS |
+| `:app:assembleDebugAndroidTest` | PASS, empaquetado sin ejecución en dispositivo |
+| `:app:testDebugUnitTest` completa | 101/102 PASS; una prueba Room (`orphan original...`) falla en contexto de suite por `SQLiteCantOpenDatabaseException`; repetida aislada: PASS |
+| `:app:lintDebug` | FAIL por `PropertyEscape` en `local.properties` ignorado/no versionado; 29 avisos preexistentes de dependencias/API y recursos |
+| Captura `app/build/reports/screenshots/player.png` | Generada desde Robolectric y revisada |
+| Voz real, usabilidad, accesibilidad/TalkBack y tamaños grandes | NOT RUN; requieren teléfono y voces instaladas |
+
+La prueba Room que falla está en código de datos no modificado. Aislada pasa, pero
+falla en las dos ejecuciones de la suite completa realizadas en este entorno; no se
+atribuye una causa raíz sin investigarla. El error de lint proviene de la ruta SDK
+local que contiene `local.properties`; no se cambió ese archivo del usuario. Los
+perfiles y pausas se verifican con pruebas automatizadas, pero eso no confirma la
+naturalidad subjetiva del audio en un motor físico.

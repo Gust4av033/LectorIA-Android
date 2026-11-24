@@ -130,7 +130,8 @@ class AndroidLocalNarrationEngine internal constructor(
         }
         parentRequestId = request.id
         var offset = 0
-        for ((index, part) in deliveryParts(request.chunk.text, request.delivery).withIndex()) {
+        val languageTag = active.voices().firstOrNull { it.id == request.voiceId }?.languageTag ?: "es"
+        for ((index, part) in deliveryParts(request.chunk.text, request.delivery, languageTag).withIndex()) {
             val chunk = request.chunk.copy(text = part,
                 start = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset),
                 end = request.chunk.start.copy(characterOffset = request.chunk.start.characterOffset + offset + part.length))

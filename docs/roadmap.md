@@ -101,3 +101,21 @@ de interpretación y nuevo diseño oscuro minimalista pedido por el usuario.
 Evidencia automática y pasos en teléfono: `testing-reader-sync.md`.
 La IA cloud sigue pendiente de backend, proveedor y consentimiento; no se añadió
 un servicio de pago ni archivos de audio.
+
+## Extensión — UI profesional y voz local (VS Code Copilot)
+
+La rama `feature/ui-pro-vscode-copilot` nace del `HEAD` `9a38e2a` de
+`feature/ui-dark-pro`. Refina la biblioteca y el reproductor con tarjetas opacas,
+portada, jerarquía de reproducción y progreso expresado como parte/sección, sin
+simular duración. Los perfiles TTS locales consideran el idioma de la voz,
+puntuación y límites de párrafo; la lista de voces muestra la calidad reportada
+por Android y enlaza a ajustes para instalar paquetes disponibles.
+
+Build Debug y las 20 pruebas enfocadas de motor de voz/pantalla del reproductor
+pasaron; también pasó el flujo de biblioteca. En dos ejecuciones de la regresión
+completa, 101/102 pruebas pasaron: una prueba Room falló en ese contexto con
+`SQLiteCantOpenDatabaseException` y pasó al repetirla aislada. El APK Android Test
+se empaquetó correctamente. Lint se detiene por el `PropertyEscape` del
+`local.properties` local, ignorado por Git; ver resultados en
+`testing-reader-sync.md`. La validación auditiva, visual, TalkBack y de accesibilidad
+en teléfono permanece pendiente. No se añade backend ni narración IA.

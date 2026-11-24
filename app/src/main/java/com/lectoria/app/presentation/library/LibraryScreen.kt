@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -169,15 +170,25 @@ private fun LibraryScreen(state: LibraryUiState, viewModel: LibraryViewModel, on
                     }
                 }
                 if (state.visibleBooks.isEmpty()) item(key = "no_results") { Text(stringResource(R.string.no_results), color = Midnight.MutedText) }
+                if (state.visibleBooks.isNotEmpty()) item(key = "collection_label") {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("TU COLECCIÓN", style = MaterialTheme.typography.labelSmall, color = Midnight.Highlight)
+                    }
+                }
                 items(state.visibleBooks, key = { it.id.value }) { book ->
                     Surface(onClick = { viewModel.select(book.id) }, enabled = !state.busy, shape = RoundedCornerShape(20.dp),
-                        color = Midnight.Surface, modifier = Modifier.fillMaxWidth().testTag("book_${book.id.value}")) {
-                        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        color = Midnight.Surface,
+                        border = BorderStroke(1.dp, Midnight.Highlight.copy(alpha = 0.14f)),
+                        modifier = Modifier.fillMaxWidth().testTag("book_${book.id.value}")) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             BookCover(book)
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 book.author?.let { Text(it, color = Midnight.MutedText, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-                                Text("${book.format.name} · ${sizeLabel(book.sizeBytes)}", color = Midnight.Highlight, style = MaterialTheme.typography.labelMedium)
+                                Surface(shape = RoundedCornerShape(50), color = Midnight.Container.copy(alpha = 0.45f)) {
+                                    Text("${book.format.name} · ${sizeLabel(book.sizeBytes)}",
+                                        Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = Midnight.Highlight, style = MaterialTheme.typography.labelSmall)
+                                }
                                 if (!book.available) Text(stringResource(R.string.book_unavailable), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -239,9 +250,12 @@ private fun BookCover(book: Book) {
     }
     val image = bitmap
     if (image != null) Image(image.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop,
-        modifier = Modifier.width(52.dp).size(52.dp, 74.dp).clip(RoundedCornerShape(8.dp)))
-    else Surface(shape = RoundedCornerShape(12.dp), color = Midnight.Container.copy(alpha = 0.3f)) {
-        Icon(painterResource(R.drawable.ic_library), contentDescription = null, tint = Midnight.Highlight, modifier = Modifier.padding(14.dp).size(28.dp))
+        modifier = Modifier.size(width = 58.dp, height = 80.dp).clip(RoundedCornerShape(10.dp)))
+    else Surface(modifier = Modifier.size(width = 58.dp, height = 80.dp),
+        shape = RoundedCornerShape(10.dp), color = Midnight.Container.copy(alpha = 0.3f)) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_library), contentDescription = null, tint = Midnight.Highlight, modifier = Modifier.size(28.dp))
+        }
     }
 }
 

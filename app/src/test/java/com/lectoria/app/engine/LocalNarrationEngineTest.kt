@@ -87,13 +87,13 @@ class LocalNarrationEngineTest {
         assertEquals(TextLocator("chapter", 101), word.locator)
         assertEquals(TextLocator("chapter", 107), word.end)
         platform.listener.done(platform.ids.last()); runCurrent()
-        advanceTimeBy(90); runCurrent()
+        advanceTimeBy(130); runCurrent()
         assertEquals(2, platform.speaks)
         platform.listener.done(platform.ids.last()); runCurrent()
         assertTrue(result.await().isSuccess)
         assertEquals(text, platform.texts.joinToString(""))
-        assertEquals(listOf(1.09f, 1.06f), platform.pitches)
-        assertEquals(1.03f, platform.rates.last())
+        assertEquals(listOf(1.055f, 1.045f), platform.pitches)
+        assertEquals(1.02f, platform.rates.last())
         engine.shutdown()
     }
 
@@ -105,9 +105,17 @@ class LocalNarrationEngineTest {
             assertTrue(parts.all { it.length <= 350 && !Character.isHighSurrogate(it.last()) })
         }
         assertEquals(SpeechProsody(1f, 1f, 0), speechProsody("Hola.", 1f, SpeechDelivery.STANDARD))
-        assertEquals(1.09f, speechProsody("¿Vienes?»", 1f, SpeechDelivery.LIVELY).pitch)
+        assertEquals(1.055f, speechProsody("¿Vienes?»", 1f, SpeechDelivery.LIVELY).pitch)
         assertEquals(2f, speechProsody("Hola!", 2f, SpeechDelivery.LIVELY).rate)
         assertEquals(0.5f, speechProsody("Hola.", 0.5f, SpeechDelivery.NARRATIVE).rate)
+        assertEquals(320L, speechProsody("Primer párrafo.\n\n", 1f, SpeechDelivery.NARRATIVE).pauseMs)
+        assertTrue(speechProsody("¿Vienes?", 1f, SpeechDelivery.NARRATIVE).pauseMs >
+            speechProsody("Vienes,", 1f, SpeechDelivery.NARRATIVE).pauseMs)
+        val clause = "La narración descansa un instante, y luego sigue con calma."
+        val clauseParts = deliveryParts(clause, SpeechDelivery.NARRATIVE, "es-MX")
+        assertEquals(clause, clauseParts.joinToString(""))
+        assertTrue(clauseParts.first().endsWith(","))
+        assertTrue(deliveryParts("First sentence. Deuxième phrase !", SpeechDelivery.NARRATIVE, "fr-FR").all { it.isNotBlank() })
     }
 
     @Test fun `service failure before speech reconnects once and ignores old connection callbacks`() = runTest {
