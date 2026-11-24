@@ -7,7 +7,7 @@ Este repositorio implementa la aplicación Android **Lector IA**. La fuente de v
 1. Funcionalidad verificable y seguridad de datos.
 2. Offline-first, TTS local y narración IA solo opcional.
 3. Separación entre lectura de documentos, extracción textual, narración, reproducción, datos y UI.
-4. UI Compose estilo tormenta medianoche, cuidando accesibilidad.
+4. UI Compose oscura, minimalista y elegante (preferencia actualizada por el usuario), cuidando accesibilidad.
 5. Mínima complejidad razonable; no inventar integraciones ni APIs.
 
 ## Flujo

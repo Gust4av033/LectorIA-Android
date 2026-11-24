@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Normal-size action text meets AA using the existing midnight palette. */
+/** Normal-size action text meets AA using the neutral dark palette. */
 @Composable
 fun LectorButton(
     onClick: () -> Unit,

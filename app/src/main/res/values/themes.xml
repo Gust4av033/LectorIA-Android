@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="launcher_background">#040A1C</color>
+    <color name="launcher_background">#101010</color>
     <style name="Theme.LectorIA" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowBackground">@color/launcher_background</item>
-        <item name="android:colorAccent">#79DDFF</item>
+        <item name="android:colorAccent">#D6C6A6</item>
     </style>
 </resources>

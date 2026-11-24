@@ -53,23 +53,27 @@ fun ReaderRoute(onLibrary: () -> Unit, onListen: () -> Unit = {}, viewModel: Rea
     val state by viewModel.state.collectAsStateWithLifecycle()
     val player: com.lectoria.app.presentation.player.PlayerViewModel = hiltViewModel()
     val listen = { state.book?.let { book -> state.page?.let { page -> player.client.listen(book.id, page.locator); onListen() } }; Unit }
-    ReaderScreen(state, viewModel::go, viewModel::retry, viewModel::retrySave, onLibrary, listen)
+    ReaderScreen(state, viewModel::go, viewModel::retry, viewModel::retrySave, onLibrary, listen, viewModel::followVoice, player.client::pause, player.client::play)
 }
 
 @Composable
-private fun ReaderScreen(
+internal fun ReaderScreen(
     state: ReaderUiState,
     onGo: (com.lectoria.app.domain.model.ReadingLocator) -> Unit,
     onReload: () -> Unit,
     onRetrySave: () -> Unit,
     onLibrary: () -> Unit,
     onListen: () -> Unit,
+    onFollow: () -> Unit = {},
+    onPause: () -> Unit = {},
+    onResume: () -> Unit = {},
 ) {
     var contents by remember { mutableStateOf(false) }
     var fontSize by rememberSaveable { mutableIntStateOf(20) }
     var showPdfText by rememberSaveable { mutableStateOf(false) }
     val scroll = rememberScrollState()
     val page = state.page
+    LaunchedEffect(state.hasNarration, state.followingVoice) { if (state.hasNarration && state.followingVoice) showPdfText = true }
     val smallerLabel = stringResource(R.string.reader_smaller)
     val largerLabel = stringResource(R.string.reader_larger)
     LaunchedEffect(page?.locator, showPdfText) { scroll.scrollTo(0) }
@@ -111,7 +115,10 @@ private fun ReaderScreen(
                 color = Midnight.Highlight, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.testTag("reader_position"))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (isPdf) LectorTextButton(onClick = { showPdfText = !showPdfText }, modifier = Modifier.testTag("reader_toggle_text")) {
+                if (isPdf) LectorTextButton(onClick = {
+                    if (showPdfText && state.hasNarration && state.followingVoice) onFollow()
+                    showPdfText = !showPdfText
+                }, modifier = Modifier.testTag("reader_toggle_text")) {
                     Text(stringResource(if (showPdfText) R.string.reader_show_page else R.string.reader_show_text))
                 } else Text(stringResource(R.string.reader_text_mode), Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Midnight.MutedText)
                 if (!isPdf || showPdfText) {
@@ -121,6 +128,11 @@ private fun ReaderScreen(
                         modifier = Modifier.testTag("reader_larger").semantics { contentDescription = largerLabel }) { Text("A+") }
                 }
             }
+            if (state.hasNarration) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.FilterChip(selected = state.followingVoice, onClick = onFollow,
+                    label = { Text(if (state.followingVoice) "Siguiendo la voz" else "Volver a la voz") }, modifier = Modifier.testTag("reader_follow_voice"))
+                if (state.followingVoice) Text(" · Texto sincronizado", style = MaterialTheme.typography.labelSmall, color = Midnight.MutedText)
+            }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).testTag("reader_content"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (isPdf && page.text.isBlank()) Text(stringResource(if (state.extractionAllowed) R.string.reader_no_pdf_text else R.string.reader_extraction_denied), color = Midnight.Highlight)
                 if (isPdf && !showPdfText) {
@@ -128,10 +140,14 @@ private fun ReaderScreen(
                     if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = stringResource(R.string.reader_pdf_image, page.sectionIndex + 1), modifier = Modifier.fillMaxWidth())
                     if (state.imageFailed) Text(stringResource(R.string.reader_image_error), color = MaterialTheme.colorScheme.error)
                 } else if (page.text.isNotBlank()) SelectionContainer {
-                    Text(page.text.removePrefix("\uFEFF"), fontSize = fontSize.sp, lineHeight = (fontSize * 1.55f).sp, modifier = Modifier.testTag("reader_text"))
+                    NarratedText(page.text.removePrefix("\uFEFF"), fontSize, state.highlight, state.followingVoice)
                 } else if (!isPdf) Text(stringResource(R.string.reader_no_section_text), color = Midnight.MutedText)
             }
-            if (page.chunk != null) LectorButton(onClick = onListen, enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("listen_book")) { Text("Escuchar desde aquí") }
+            if (page.chunk != null) LectorButton(onClick = if (state.hasNarration) { if (state.voicePlaying) onPause else onResume } else onListen,
+                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("listen_book")) {
+                Text(if (state.hasNarration) { if (state.voicePlaying) "Pausar voz" else "Continuar escucha" } else "Escuchar desde aquí")
+            }
+            if (state.hasNarration && !state.followingVoice) LectorTextButton(onClick = onListen, enabled = !state.busy) { Text("Escuchar desde esta parte") }
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 LectorButton(onClick = { previous?.let(onGo) }, enabled = previous != null && !state.busy,
                     modifier = Modifier.testTag("reader_previous")) { Text(stringResource(R.string.reader_previous)) }

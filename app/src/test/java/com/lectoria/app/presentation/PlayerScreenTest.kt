@@ -24,6 +24,13 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [36], qualifiers = "es-rGT-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PlayerScreenTest {
+    @Test fun `interpretation choice invokes the selected local profile`() {
+        var delivery: SpeechDelivery? = null
+        compose.activity.setContent { LectorIaTheme { PlayerScreen(state(), PlayerActions(delivery = { delivery = it }), settingsOnly = true) } }
+        compose.onNodeWithTag("delivery_LIVELY").performScrollTo().performClick()
+        assertEquals(SpeechDelivery.LIVELY, delivery)
+    }
+
     @Test fun `service error offers an explicit reconnect action`() {
         var reconnected = false
         compose.activity.setContent { LectorIaTheme { PlayerScreen(state().copy(phase = SpeechPhase.FAILED,
