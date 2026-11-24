@@ -244,8 +244,21 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                     Text(engine.label, Modifier.weight(1f))
                 }
             }
-            item { Text("Voces instaladas · sin Internet", style = MaterialTheme.typography.labelLarge) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Voces instaladas · sin Internet", style = MaterialTheme.typography.labelLarge)
+                    Text("La recomendación usa la calidad que informa Android. Puedes comparar motores y probar cada voz.",
+                        style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                }
+            }
             val voices = state.catalog.voices.filter { it.offline && it.installed }
+            val recommendedVoice = preferredOfflineSpanishVoice(voices, state.catalog.defaultVoiceId)
+            val rankedVoices = voices.sortedWith(
+                compareByDescending<SpeechVoice> { it.id == recommendedVoice?.id }
+                    .thenByDescending { Locale.forLanguageTag(it.languageTag).language == "es" }
+                    .thenByDescending { it.quality }
+                    .thenBy { it.languageTag },
+            )
             if (state.loadingVoices) item { Text("Cargando voces…"); LinearProgressIndicator(Modifier.fillMaxWidth()) }
             if (voices.isEmpty() && !state.loadingVoices) item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -256,12 +269,17 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                     }) { Text("Abrir ajustes de voz") }
                 }
             }
-            items(voices.size) { index -> val voice = voices[index]
+            items(rankedVoices.size) { index -> val voice = rankedVoices[index]
                 LectorTextButton(onClick = { actions.voice(voice.id); voiceDialog = false }, enabled = !state.loadingVoices, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = state.settings.voiceId == voice.id, onClick = null)
                     Column(Modifier.weight(1f)) {
                         Text(friendlyVoice(voice, state.catalog.voices))
-                        Text(voiceQualityLabel(voice.quality), style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                        Text(
+                            if (voice.id == recommendedVoice?.id) "Recomendada · ${voiceQualityLabel(voice.quality)}"
+                            else voiceQualityLabel(voice.quality),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (voice.id == recommendedVoice?.id) Midnight.Highlight else Midnight.MutedText,
+                        )
                     }
                 }
             }

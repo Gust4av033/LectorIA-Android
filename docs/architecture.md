@@ -448,3 +448,16 @@ premium gratuita, y no se integra un proveedor cloud ni una API de pago.
 La mejora percibida depende del motor y de las voces instaladas en cada Android.
 Antes de declarar calidad de voz o accesibilidad verificadas, se requiere prueba
 auditiva en los motores del dispositivo de destino.
+
+## ADR-016 — Recomendar voz offline de mayor calidad disponible
+
+Cuando el usuario no ha elegido una voz explícitamente, la app selecciona la voz
+española instalada/offline con mayor valor de calidad reportado por Android dentro
+del motor elegido. Si hay empate, conserva la voz predeterminada de ese motor.
+Una selección explícita guardada siempre prevalece. La lista pone esa recomendación
+primero y separa el nivel declarado por Android del resultado subjetivo.
+
+No se cambia a Google/Samsung automáticamente ni se descarga una voz sin permiso.
+El catálogo de motores sigue siendo seleccionable; las pruebas físicas deben
+comparar escucha y latencia. El valor `quality` es metadata del motor y no una
+medida independiente de naturalidad.

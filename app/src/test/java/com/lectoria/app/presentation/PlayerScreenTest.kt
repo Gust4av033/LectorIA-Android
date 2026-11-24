@@ -76,6 +76,7 @@ class PlayerScreenTest {
         var selected: String? = null
         compose.activity.setContent { LectorIaTheme { PlayerScreen(state(), PlayerActions(voice = { selected = it })) } }
         compose.onNodeWithTag("change_voice").performScrollTo().performClick()
+        compose.onNodeWithText("Recomendada · Voz offline · calidad variable según el motor").assertExists()
         compose.onAllNodesWithText("Español · México").onLast().performClick()
         assertEquals(voice.id, selected)
         compose.onNodeWithText(voice.id).assertDoesNotExist()

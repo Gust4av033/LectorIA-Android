@@ -13,7 +13,6 @@ import com.lectoria.app.domain.model.TextLocator
 import com.lectoria.app.domain.repository.BookRepository
 import com.lectoria.app.domain.repository.ReadingProgressRepository
 import java.time.Instant
-import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -137,8 +136,7 @@ class NarrationCoordinator(
             val catalog = engine.configure(state.value.settings.engineId)
             val settings = state.value.settings
             val voice = if (settings.voiceId != null) catalog.voices.firstOrNull { it.id == settings.voiceId && it.offline && it.installed }
-                else catalog.voices.firstOrNull { it.id == catalog.defaultVoiceId && it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }
-                    ?: catalog.voices.filter { it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }.maxByOrNull { it.quality }
+                else preferredOfflineSpanishVoice(catalog.voices, catalog.defaultVoiceId)
             mutableState.update { it.copy(catalog = catalog, loadingVoices = false,
                 settings = settings.copy(engineId = catalog.engineId, voiceId = voice?.id),
                 failure = when { catalog.engines.isEmpty() -> SpeechFailure.NO_ENGINE; voice == null -> SpeechFailure.NO_OFFLINE_VOICE; else -> null }) }

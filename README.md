@@ -221,3 +221,10 @@ del sistema para descargar/mejorar voces sin conexión si tu motor las ofrece.
 Esto no crea una voz nueva: la calidad real depende del teléfono y del paquete de
 voz. La app no añade pagos, servicios cloud ni sube libros. Pruebas y limitaciones
 actuales: [testing-reader-sync.md](docs/testing-reader-sync.md).
+
+La app recomienda la voz española instalada/offline con mayor clasificación del
+motor elegido y conserva una selección manual. No cambia de motor ni descarga
+voces por su cuenta. En el Samsung SM-S906U, Google TTS y Samsung TTS pudieron
+pronunciar la muestra sintética local; ambos reportaron quality 400. Puedes
+compararlos desde **Cambiar voz → Probar voz** y elegir el que te resulte más
+natural.

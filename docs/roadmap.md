@@ -119,3 +119,12 @@ se empaquetó correctamente. Lint se detiene por el `PropertyEscape` del
 `local.properties` local, ignorado por Git; ver resultados en
 `testing-reader-sync.md`. La validación auditiva, visual, TalkBack y de accesibilidad
 en teléfono permanece pendiente. No se añade backend ni narración IA.
+
+### Selección de la mejor voz local disponible
+
+El catálogo prioriza la voz española offline instalada con mayor clasificación
+Android y mantiene una voz seleccionada manualmente. El selector ordena la
+recomendación arriba y permite probar los motores sin conexión. En el SM-S906U
+conectado, Google TTS y Samsung TTS reportaron una voz `es-US` con quality 400;
+ambas pronunciaron la frase sintética de `LocalVoiceTest`. La preferencia auditiva
+entre motores queda pendiente del usuario, pues la clasificación coincide.

@@ -178,12 +178,25 @@ class NarrationCoordinatorTest {
         assertTrue(r.focus.held)
     }
 
-    @Test fun `offline Spanish system default is preferred over an arbitrary higher quality voice`() = runTest {
+    @Test fun `highest quality installed offline Spanish voice is preferred over a lower rated system default`() = runTest {
         val r = Rig(this)
-        r.engine.voices = listOf(spanish.copy(id = "system", quality = 100), spanish.copy(id = "other", quality = 500))
+        r.engine.voices = listOf(
+            spanish.copy(id = "system", quality = 200),
+            spanish.copy(id = "better", quality = 500),
+            spanish.copy(id = "network", offline = false, quality = 600),
+            spanish.copy(id = "missing", installed = false, quality = 700),
+        )
         r.engine.defaultVoiceId = "system"
         r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
-        assertEquals("system", r.engine.requests.single().voiceId)
+        assertEquals("better", r.engine.requests.single().voiceId)
+    }
+
+    @Test fun `explicitly selected installed voice is kept instead of automatic quality ranking`() = runTest {
+        val r = Rig(this)
+        r.prefs.settings = SpeechSettings(voiceId = "chosen")
+        r.engine.voices = listOf(spanish.copy(id = "chosen", quality = 200), spanish.copy(id = "higher", quality = 500))
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        assertEquals("chosen", r.engine.requests.single().voiceId)
     }
 
     @Test fun `network system default is never automatically selected`() = runTest {

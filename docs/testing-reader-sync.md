@@ -108,3 +108,25 @@ atribuye una causa raíz sin investigarla. El error de lint proviene de la ruta 
 local que contiene `local.properties`; no se cambió ese archivo del usuario. Los
 perfiles y pausas se verifican con pruebas automatizadas, pero eso no confirma la
 naturalidad subjetiva del audio en un motor físico.
+
+## Motor de voz local — selección recomendada y prueba física
+
+La rama ahora usa la mayor calidad que Android reporta entre las voces españolas
+offline instaladas del motor seleccionado; si el usuario ya escogió una voz, la
+conserva. Los motores no se cambian automáticamente. Android tiene instalados
+Google TTS y Samsung TTS, por lo que no se descargó ni añadió otro motor.
+
+| Prueba | Resultado |
+|---|---|
+| `NarrationCoordinatorTest` y `PlayerScreenTest` | PASS: recomendación por calidad offline, voz manual preservada y recomendación visible |
+| `:app:assembleDebug` y `:app:assembleDebugAndroidTest` | PASS |
+| `:app:connectedDebugAndroidTest` con `ttsEngine=com.google.android.tts` | PASS en SM-S906U / Android 16; frase sintética pronunciada |
+| `LocalVoiceTest` con motor predeterminado Samsung (`com.samsung.SMT`) | PASS en SM-S906U / Android 16; frase sintética pronunciada |
+| Metadata de voz, según log de Android | Google `es-US`, quality 400; Samsung `es-US`, quality 400 |
+
+Las dos pruebas usan únicamente «Prueba de lectura local: niño y canción.» y no
+abren ni narran libros. Ambos motores dan igual nivel metadata; no se afirma cuál
+suena mejor sin comparar auditivamente. En el reproductor, abre **Cambiar voz**,
+prueba Google TTS y Samsung TTS con **Probar voz** y conserva el que prefieras.
+`quality=400` corresponde a la clasificación informada por Android, no a una
+garantía de naturalidad.

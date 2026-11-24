@@ -2,6 +2,7 @@ package com.lectoria.app.domain.narration
 
 import com.lectoria.app.domain.document.TextChunk
 import com.lectoria.app.domain.model.TextLocator
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 
 enum class NarrationOutput { LiveSpeech, AudioFile }
@@ -31,6 +32,11 @@ data class SpeechRequest(val id: String, val chunk: TextChunk, val voiceId: Stri
 data class SpeechEngineInfo(val id: String, val label: String)
 data class SpeechVoice(val id: String, val label: String, val languageTag: String, val offline: Boolean, val installed: Boolean, val quality: Int)
 data class VoiceCatalog(val engineId: String?, val engines: List<SpeechEngineInfo>, val voices: List<SpeechVoice>, val defaultVoiceId: String? = null)
+
+fun preferredOfflineSpanishVoice(voices: List<SpeechVoice>, defaultVoiceId: String? = null): SpeechVoice? =
+    voices.asSequence()
+        .filter { it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }
+        .maxWithOrNull(compareBy<SpeechVoice> { it.quality }.thenBy { it.id == defaultVoiceId })
 
 interface LocalNarrationEngine : NarrationEngine {
     suspend fun configure(engineId: String?): VoiceCatalog
