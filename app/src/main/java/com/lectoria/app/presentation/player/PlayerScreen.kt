@@ -35,7 +35,7 @@ class PlayerViewModel @Inject constructor(val client: NarrationClient) : ViewMod
 data class PlayerActions(
     val play: () -> Unit = {}, val pause: () -> Unit = {}, val previous: () -> Unit = {}, val next: () -> Unit = {},
     val stop: () -> Unit = {}, val library: () -> Unit = {}, val read: () -> Unit = {}, val refresh: () -> Unit = {},
-    val test: () -> Unit = {}, val engine: (String) -> Unit = {}, val voice: (String) -> Unit = {}, val rate: (Float) -> Unit = {},
+    val test: () -> Unit = {}, val reconnect: () -> Unit = {}, val engine: (String) -> Unit = {}, val voice: (String) -> Unit = {}, val rate: (Float) -> Unit = {},
 )
 
 @Composable
@@ -43,7 +43,7 @@ fun PlayerRoute(onLibrary: () -> Unit, onReader: (String) -> Unit, settingsOnly:
     val state by viewModel.state.collectAsStateWithLifecycle()
     PlayerScreen(state, PlayerActions(viewModel.client::play, viewModel.client::pause, viewModel.client::previous,
         viewModel.client::next, viewModel.client::stop, onLibrary, { viewModel.read(onReader) }, viewModel::refresh,
-        viewModel.client::testVoice, viewModel::engine, viewModel::voice, viewModel::rate), settingsOnly)
+        viewModel.client::testVoice, viewModel.client::reconnectVoice, viewModel::engine, viewModel::voice, viewModel::rate), settingsOnly)
 }
 
 @Composable
@@ -53,6 +53,7 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
     var preview by remember { mutableStateOf(false) }
     var help by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
         .testTag(if (settingsOnly) "screen_settings" else "screen_player"), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(if (settingsOnly) "Ajustes de voz" else "Reproductor", style = MaterialTheme.typography.headlineLarge)
@@ -99,8 +100,14 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                     Text("Lectura interrumpida", style = MaterialTheme.typography.titleMedium)
                     Text(engineFailureText(failure, state.engineErrorCode), Modifier.testTag("speech_error"))
                     Row {
-                        if (state.voice != null && state.book != null) LectorTextButton(onClick = actions.play) { Text("Reintentar") }
+                        if (failure in listOf(SpeechFailure.ENGINE, SpeechFailure.INIT, SpeechFailure.SERVICE, SpeechFailure.TIMEOUT)) {
+                            LectorButton(onClick = actions.reconnect, enabled = !state.active) { Text("Reconectar voz") }
+                        } else if (state.voice != null && state.book != null) LectorTextButton(onClick = actions.play) { Text("Reintentar") }
                         LectorTextButton(onClick = { voiceDialog = true }) { Text("Cambiar voz") }
+                    }
+                    LectorTextButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(voiceDiagnostic(state))) }) { Text("Copiar diagnóstico") }
+                    state.catalog.voices.firstOrNull { it.id == state.catalog.defaultVoiceId && it.offline && it.installed }?.let { default ->
+                        LectorTextButton(onClick = { actions.voice(default.id) }) { Text("Usar voz de Android") }
                     }
                 }
             }
@@ -109,6 +116,16 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
         com.lectoria.app.presentation.screens.GlassCard {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Voz de lectura", style = MaterialTheme.typography.titleMedium)
+                Text(when {
+                    state.reconnectingVoice -> "Reconectando con el motor…"
+                    state.loadingVoices || state.phase == SpeechPhase.PREPARING -> "Conectando…"
+                    state.failure != null -> "La voz necesita atención"
+                    state.active && state.speechConfirmed -> "Voz iniciada"
+                    state.active -> "Esperando respuesta del motor…"
+                    state.voice != null -> "Voz preparada · sin Internet"
+                    else -> "Falta seleccionar una voz"
+                }, color = if (state.failure != null) MaterialTheme.colorScheme.error else Midnight.Highlight,
+                    style = MaterialTheme.typography.labelLarge, modifier = Modifier.testTag("voice_connection"))
                 Text(state.voice?.let { friendlyVoice(it, state.catalog.voices) } ?: "Elige una voz en español", style = MaterialTheme.typography.titleLarge)
                 Text(state.catalog.engines.firstOrNull { it.id == state.settings.engineId }?.label ?: "Configura el motor de voz", color = Midnight.MutedText)
                 Row {
@@ -182,10 +199,12 @@ internal fun friendlyVoice(voice: SpeechVoice, all: List<SpeechVoice>): String {
     return language + (country?.let { " · $it" } ?: "") + variant
 }
 
-private fun playerStatus(state: NarrationState): String = if (state.testingVoice) "Probando la voz…" else when (state.phase) {
+private fun playerStatus(state: NarrationState): String = if (state.reconnectingVoice) "Reconectando la voz…" else if (state.testingVoice) {
+    if (state.speechConfirmed) "Prueba de voz en curso" else "Preparando la prueba de voz…"
+} else when (state.phase) {
     SpeechPhase.IDLE -> "Listo para escuchar"
     SpeechPhase.PREPARING -> "Preparando voz…"
-    SpeechPhase.PLAYING -> "Leyendo en voz alta"
+    SpeechPhase.PLAYING -> if (state.speechConfirmed) "Leyendo en voz alta" else "Esperando al motor de voz…"
     SpeechPhase.PAUSED -> when (state.pauseReason) {
         PauseReason.FOCUS -> "En pausa por otra aplicación o llamada"
         PauseReason.HEADPHONES -> "En pausa: auriculares desconectados"
@@ -200,7 +219,7 @@ internal fun engineFailureText(failure: SpeechFailure, code: Int?): String = if 
     -8 -> "El motor rechazó el texto (código -8). Prueba la voz y vuelve a abrir esta parte del libro."
     -7, -6 -> "Esta voz intentó usar red (código $code). Elige otra voz instalada que funcione sin Internet."
     -5 -> "No se pudo abrir la salida de audio (código -5). Revisa el volumen multimedia y los auriculares."
-    -4 -> "El servicio de voz se desconectó (código -4). Prueba la voz de nuevo."
+    -4 -> "El servicio de voz falló (código -4). Reconecta el motor y prueba la voz antes de continuar el libro."
     -3 -> "El motor no pudo generar la voz (código -3). Usa Probar voz o elige otra voz instalada."
     else -> "El motor devolvió el código $code. Usa Probar voz para comprobarlo sin abrir el libro."
 }
@@ -216,4 +235,15 @@ fun speechFailureText(failure: SpeechFailure): String = when (failure) {
     SpeechFailure.AUDIO_FOCUS -> "Otra aplicación controla el audio. Reanuda cuando esté disponible."
     SpeechFailure.STORAGE -> "No se pudieron recuperar o guardar los ajustes de voz. Intenta de nuevo."
     SpeechFailure.SERVICE -> "Android no permitió iniciar la lectura. Abre la app e intenta de nuevo."
+    SpeechFailure.TIMEOUT -> "El motor dejó de responder. La lectura se detuvo para conservar tu avance. Reconecta la voz."
 }
+
+internal fun voiceDiagnostic(state: NarrationState): String = """
+    Lector IA 0.4.2 · Android ${android.os.Build.VERSION.SDK_INT}
+    Motor: ${state.settings.engineId ?: "sin seleccionar"}
+    Voz: ${state.settings.voiceId ?: "sin seleccionar"}
+    Estado: ${state.phase.name}
+    Fallo: ${state.failure?.name ?: "ninguno"}
+    Código del motor: ${state.engineErrorCode ?: "sin código"}
+    Inicio confirmado: ${state.speechConfirmed}
+""".trimIndent()

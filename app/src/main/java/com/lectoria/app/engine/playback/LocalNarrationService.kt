@@ -91,6 +91,7 @@ class LocalNarrationService : Service() {
                     "next" -> coordinator.skip(true)
                     "previous" -> coordinator.skip(false)
                     "test" -> coordinator.testVoice()
+                    "reconnect" -> coordinator.reconnectVoice()
                     else -> coordinator.stop()
                 }
                 update(coordinator.state.value)

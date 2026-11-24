@@ -9,10 +9,13 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.lectoria.app.domain.narration.SpeechEngineInfo
 import com.lectoria.app.domain.narration.SpeechVoice
+import com.lectoria.app.domain.narration.SpeechException
+import com.lectoria.app.domain.narration.SpeechFailure
 
 /** Small SDK seam for callback/race tests; the production factory always binds Android TTS. */
 internal interface SpeechPlatform {
     fun ready() {}
+    fun defaultVoiceId(): String? = null
     fun voices(): List<SpeechVoice>
     fun selectVoice(id: String): Boolean
     fun setRate(rate: Float): Boolean
@@ -48,8 +51,10 @@ internal class AndroidSpeechPlatformFactory(private val context: Context) : Spee
 
 private class AndroidSpeechPlatform(context: Context, engine: String, initialized: (Boolean) -> Unit, private val listener: SpeechPlatform.Listener) : SpeechPlatform {
     private val tts = TextToSpeech(context, { initialized(it == TextToSpeech.SUCCESS) }, engine)
+    private var initialVoice: String? = null
 
     override fun ready() {
+        initialVoice = tts.voice?.name
         tts.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String) = listener.started(utteranceId)
@@ -62,7 +67,9 @@ private class AndroidSpeechPlatform(context: Context, engine: String, initialize
         })
     }
 
-    override fun voices(): List<SpeechVoice> = tts.voices.orEmpty().map { voice ->
+    override fun defaultVoiceId(): String? = initialVoice
+
+    override fun voices(): List<SpeechVoice> = (tts.voices ?: throw SpeechException(SpeechFailure.ENGINE, TextToSpeech.ERROR_SERVICE)).map { voice ->
         SpeechVoice(voice.name, voice.name, voice.locale.toLanguageTag(), !voice.isNetworkConnectionRequired,
             !voice.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED), voice.quality)
     }.sortedWith(compareBy<SpeechVoice> { it.languageTag }.thenByDescending { it.quality }.thenBy { it.id })
@@ -78,7 +85,10 @@ private class AndroidSpeechPlatform(context: Context, engine: String, initialize
     override fun speak(text: String, id: String): Boolean {
         // The selected Voice determines offline synthesis. Legacy feature flags can
         // conflict with named voices in vendor engines; do not override their mode.
-        return tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), id) == TextToSpeech.SUCCESS
+        // setVoice() enqueues LoadVoiceItem. QUEUE_FLUSH here would cancel it.
+        // The owner explicitly stops old speech before selection and awaits each
+        // utterance; QUEUE_ADD preserves load -> synthesize ordering without overlap.
+        return tts.speak(text, TextToSpeech.QUEUE_ADD, Bundle(), id) == TextToSpeech.SUCCESS
     }
     override fun stop() { tts.stop() }
     override fun shutdown() { tts.shutdown() }

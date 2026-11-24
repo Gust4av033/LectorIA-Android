@@ -18,6 +18,34 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NarrationCoordinatorTest {
+    @Test fun `reconnect replaces the engine without automatically speaking or moving the bookmark`() = runTest {
+        val r = Rig(this)
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        r.engine.range(5); runCurrent()
+        r.coordinator.pause()
+        val saved = r.marks.entries[book().id]
+        r.coordinator.reconnectVoice(); runCurrent()
+        assertEquals(SpeechPhase.PAUSED, r.coordinator.state.value.phase)
+        assertFalse(r.coordinator.state.value.reconnectingVoice)
+        assertEquals(1, r.engine.requests.size)
+        assertEquals(saved, r.marks.entries[book().id])
+    }
+
+    @Test fun `speaking is only confirmed by the active engine callback`() = runTest {
+        val r = Rig(this)
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        assertFalse(r.coordinator.state.value.speechConfirmed)
+        r.engine.events.tryEmit(NarrationEvent.Started("old")); runCurrent()
+        assertFalse(r.coordinator.state.value.speechConfirmed)
+        val id = r.engine.requests.single().id
+        r.engine.events.tryEmit(NarrationEvent.Started(id)); runCurrent()
+        assertTrue(r.coordinator.state.value.speechConfirmed)
+        r.engine.events.tryEmit(NarrationEvent.Reconnecting(id)); runCurrent()
+        assertFalse(r.coordinator.state.value.speechConfirmed)
+        assertTrue(r.coordinator.state.value.reconnectingVoice)
+        r.coordinator.pause(); runCurrent()
+        assertFalse(r.coordinator.state.value.reconnectingVoice)
+    }
     @Test fun `voice sample uses no book text and cannot advance the saved listening position`() = runTest {
         val r = Rig(this)
         r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
@@ -81,9 +109,10 @@ class NarrationCoordinatorTest {
         val requests = mutableListOf<SpeechRequest>()
         var current: CompletableDeferred<Result<Unit>>? = null
         var initFailure: SpeechFailure? = null
+        var defaultVoiceId: String? = null
         override suspend fun configure(engineId: String?): VoiceCatalog {
             initFailure?.let { throw SpeechException(it) }
-            return VoiceCatalog(engineId ?: "engine", listOf(SpeechEngineInfo("engine", "Motor instalado")), voices)
+            return VoiceCatalog(engineId ?: "engine", listOf(SpeechEngineInfo("engine", "Motor instalado")), voices, defaultVoiceId)
         }
         override suspend fun narrate(request: SpeechRequest): Result<Unit> {
             requests += request
@@ -147,6 +176,22 @@ class NarrationCoordinatorTest {
         assertEquals("es-local", r.engine.requests.single().voiceId)
         assertEquals(SpeechPhase.PLAYING, r.coordinator.state.value.phase)
         assertTrue(r.focus.held)
+    }
+
+    @Test fun `offline Spanish system default is preferred over an arbitrary higher quality voice`() = runTest {
+        val r = Rig(this)
+        r.engine.voices = listOf(spanish.copy(id = "system", quality = 100), spanish.copy(id = "other", quality = 500))
+        r.engine.defaultVoiceId = "system"
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        assertEquals("system", r.engine.requests.single().voiceId)
+    }
+
+    @Test fun `network system default is never automatically selected`() = runTest {
+        val r = Rig(this)
+        r.engine.voices = listOf(spanish, spanish.copy(id = "network-default", offline = false, quality = 500))
+        r.engine.defaultVoiceId = "network-default"
+        r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
+        assertEquals(spanish.id, r.engine.requests.single().voiceId)
     }
 
     @Test fun `missing offline Spanish voice is explicit and a different language requires a selection`() = runTest {

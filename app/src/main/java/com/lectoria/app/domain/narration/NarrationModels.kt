@@ -42,6 +42,8 @@ data class NarrationState(
     val settings: SpeechSettings = SpeechSettings(),
     val loadingVoices: Boolean = false,
     val testingVoice: Boolean = false,
+    val speechConfirmed: Boolean = false,
+    val reconnectingVoice: Boolean = false,
     val failure: SpeechFailure? = null,
     val engineErrorCode: Int? = null,
     val saveFailed: Boolean = false,
@@ -71,4 +73,5 @@ interface NarrationClient {
     fun previous()
     fun stop()
     fun testVoice()
+    fun reconnectVoice()
 }

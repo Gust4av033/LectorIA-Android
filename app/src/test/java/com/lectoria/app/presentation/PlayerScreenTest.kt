@@ -24,6 +24,21 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [36], qualifiers = "es-rGT-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PlayerScreenTest {
+    @Test fun `service error offers an explicit reconnect action`() {
+        var reconnected = false
+        compose.activity.setContent { LectorIaTheme { PlayerScreen(state().copy(phase = SpeechPhase.FAILED,
+            failure = SpeechFailure.ENGINE, engineErrorCode = -4), PlayerActions(reconnect = { reconnected = true })) } }
+        compose.onNodeWithText("Reconectar voz").performScrollTo().performClick()
+        assertTrue(reconnected)
+    }
+
+    @Test fun `support diagnostic never contains the book text title or private file path`() {
+        val state = state().copy(book = state().book!!.copy(title = "PRIVATE_TITLE", localPath = "/PRIVATE_PATH"), preview = "PRIVATE_PARAGRAPH",
+            failure = SpeechFailure.ENGINE, engineErrorCode = -4)
+        val text = voiceDiagnostic(state)
+        assertFalse(text.contains("PRIVATE"))
+        assertTrue(text.contains("-4"))
+    }
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val voice = SpeechVoice("private-technical-id", "private-technical-id", "es-MX", true, true, 200)
     private fun state() = NarrationState(phase = SpeechPhase.PAUSED,

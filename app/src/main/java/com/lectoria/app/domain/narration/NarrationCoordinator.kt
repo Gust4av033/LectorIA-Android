@@ -66,6 +66,12 @@ class NarrationCoordinator(
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             engine.events.collect { event ->
+                if (event is NarrationEvent.Started && event.requestId == requestId) {
+                    mutableState.update { it.copy(speechConfirmed = true, reconnectingVoice = false) }
+                }
+                if (event is NarrationEvent.Reconnecting && event.requestId == requestId) {
+                    mutableState.update { it.copy(speechConfirmed = false, reconnectingVoice = true) }
+                }
                 if (event is NarrationEvent.Progress && event.requestId == requestId && state.value.phase == SpeechPhase.PLAYING) {
                     val book = state.value.book ?: return@collect
                     val locator = runCatching { activeSession?.locateText(event.locator) }.getOrNull() ?: return@collect
@@ -130,7 +136,8 @@ class NarrationCoordinator(
             val catalog = engine.configure(state.value.settings.engineId)
             val settings = state.value.settings
             val voice = if (settings.voiceId != null) catalog.voices.firstOrNull { it.id == settings.voiceId && it.offline && it.installed }
-                else catalog.voices.filter { it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }.maxByOrNull { it.quality }
+                else catalog.voices.firstOrNull { it.id == catalog.defaultVoiceId && it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }
+                    ?: catalog.voices.filter { it.offline && it.installed && Locale.forLanguageTag(it.languageTag).language == "es" }.maxByOrNull { it.quality }
             mutableState.update { it.copy(catalog = catalog, loadingVoices = false,
                 settings = settings.copy(engineId = catalog.engineId, voiceId = voice?.id),
                 failure = when { catalog.engines.isEmpty() -> SpeechFailure.NO_ENGINE; voice == null -> SpeechFailure.NO_OFFLINE_VOICE; else -> null }) }
@@ -188,7 +195,8 @@ class NarrationCoordinator(
                 saved?.let { lastWriteTime = maxOf(lastWriteTime, it.updatedAt) }
                 pending = saved
                 mutableState.update { it.copy(book = book, locator = from, phase = SpeechPhase.PREPARING,
-                    failure = null, engineErrorCode = null, testingVoice = false, saveFailed = false, pauseReason = null, preview = "") }
+                    failure = null, engineErrorCode = null, testingVoice = false, speechConfirmed = false, reconnectingVoice = false,
+                    saveFailed = false, pauseReason = null, preview = "") }
                 playback = scope.launch { speakBook(operation, selected, from, saved?.completed == true) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { fail((error as? SpeechException)?.reason ?: SpeechFailure.DOCUMENT) }
@@ -229,7 +237,7 @@ class NarrationCoordinator(
                         val current = session.locateText(start)
                         mark(id, current)
                         savePending()
-                        mutableState.update { it.copy(phase = SpeechPhase.PLAYING, locator = current, sectionIndex = page.sectionIndex,
+                        mutableState.update { it.copy(phase = SpeechPhase.PLAYING, speechConfirmed = false, reconnectingVoice = false, locator = current, sectionIndex = page.sectionIndex,
                             sectionTitle = sections.getOrNull(page.sectionIndex)?.title, sectionCount = sections.size,
                             fragmentIndex = page.fragmentIndex, fragmentCount = page.fragmentCount, hasPrevious = page.previous != null,
                             hasNext = page.next != null, preview = text.take(500), failure = null) }
@@ -247,7 +255,7 @@ class NarrationCoordinator(
             if (!spoken) throw SpeechException(SpeechFailure.NO_TEXT)
             mark(id, checkNotNull(lastPage).locator, completed = true)
             savePending()
-            mutableState.update { it.copy(phase = SpeechPhase.COMPLETED, locator = pending?.locator, failure = null) }
+            mutableState.update { it.copy(phase = SpeechPhase.COMPLETED, locator = pending?.locator, failure = null, speechConfirmed = false, reconnectingVoice = false) }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) {
             if (operation == generation) {
@@ -275,7 +283,8 @@ class NarrationCoordinator(
         actions.withLock {
             if (operation != generation) return@withLock
             savePending()
-            mutableState.update { it.copy(phase = when { it.book == null -> SpeechPhase.IDLE; it.phase == SpeechPhase.COMPLETED -> SpeechPhase.COMPLETED; else -> SpeechPhase.PAUSED }, pauseReason = reason) }
+            mutableState.update { it.copy(phase = when { it.book == null -> SpeechPhase.IDLE; it.phase == SpeechPhase.COMPLETED -> SpeechPhase.COMPLETED; else -> SpeechPhase.PAUSED },
+                speechConfirmed = false, reconnectingVoice = false, pauseReason = reason) }
         }
     }
 
@@ -289,7 +298,7 @@ class NarrationCoordinator(
         pause(PauseReason.SETTINGS)
         val operation = ++generation
         actions.withLock {
-            mutableState.update { it.copy(phase = SpeechPhase.PREPARING, testingVoice = true, failure = null, engineErrorCode = null) }
+            mutableState.update { it.copy(phase = SpeechPhase.PREPARING, testingVoice = true, speechConfirmed = false, reconnectingVoice = false, failure = null, engineErrorCode = null) }
             playback = scope.launch {
                 try {
                     loadSettings()
@@ -298,8 +307,10 @@ class NarrationCoordinator(
                     if (!focus.acquire { scope.launch { pause(PauseReason.FOCUS) } }) throw SpeechException(SpeechFailure.AUDIO_FOCUS)
                     mutableState.update { it.copy(phase = SpeechPhase.PLAYING) }
                     val text = "Hola. Esta es la voz que leerá tu libro."
-                    engine.narrate(SpeechRequest(UUID.randomUUID().toString(), TextChunk(text, TextLocator("voice-test", 0),
-                        TextLocator("voice-test", text.length.toLong())), voice.id, state.value.settings.rate)).getOrThrow()
+                    val request = SpeechRequest(UUID.randomUUID().toString(), TextChunk(text, TextLocator("voice-test", 0),
+                        TextLocator("voice-test", text.length.toLong())), voice.id, state.value.settings.rate)
+                    requestId = request.id
+                    engine.narrate(request).getOrThrow()
                     mutableState.update { it.copy(phase = if (it.book == null) SpeechPhase.IDLE else SpeechPhase.PAUSED, pauseReason = PauseReason.SETTINGS) }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) {
@@ -307,8 +318,25 @@ class NarrationCoordinator(
                         mutableState.update { it.copy(engineErrorCode = (error as? SpeechException)?.engineCode) }
                         fail((error as? SpeechException)?.reason ?: SpeechFailure.ENGINE)
                     }
-                } finally { withContext(NonCancellable) { engine.cancel(); focus.release(); mutableState.update { it.copy(testingVoice = false) } } }
+                } finally { withContext(NonCancellable) { requestId = null; engine.cancel(); focus.release(); mutableState.update { it.copy(testingVoice = false, speechConfirmed = false, reconnectingVoice = false) } } }
             }
+        }
+    }
+
+    suspend fun reconnectVoice() {
+        pause(PauseReason.SETTINGS)
+        actions.withLock {
+            mutableState.update { it.copy(phase = SpeechPhase.PREPARING, reconnectingVoice = true, speechConfirmed = false, engineErrorCode = null, failure = null) }
+            try {
+                engine.shutdown()
+                loadSettings()
+                catalog()
+                mutableState.update { it.copy(phase = if (it.voice == null) SpeechPhase.FAILED else if (it.book == null) SpeechPhase.IDLE else SpeechPhase.PAUSED) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                mutableState.update { it.copy(engineErrorCode = (error as? SpeechException)?.engineCode) }
+                fail((error as? SpeechException)?.reason ?: SpeechFailure.INIT)
+            } finally { mutableState.update { it.copy(reconnectingVoice = false) } }
         }
     }
 
@@ -384,5 +412,5 @@ class NarrationCoordinator(
     }
     fun reportServiceFailure() { scope.launch { pause(PauseReason.SERVICE); fail(SpeechFailure.SERVICE) } }
 
-    private fun fail(reason: SpeechFailure) { mutableState.update { it.copy(phase = SpeechPhase.FAILED, failure = reason, loadingVoices = false) } }
+    private fun fail(reason: SpeechFailure) { mutableState.update { it.copy(phase = SpeechPhase.FAILED, failure = reason, loadingVoices = false, speechConfirmed = false, reconnectingVoice = false) } }
 }

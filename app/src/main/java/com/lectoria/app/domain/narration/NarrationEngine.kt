@@ -16,6 +16,8 @@ interface NarrationEngine {
 }
 
 sealed interface NarrationEvent {
+    data class Started(val requestId: String) : NarrationEvent
+    data class Reconnecting(val requestId: String) : NarrationEvent
     data class Progress(val requestId: String, val locator: TextLocator) : NarrationEvent
     data class AudioReady(val requestId: String, val localPath: String) : NarrationEvent
     data class Completed(val requestId: String) : NarrationEvent
@@ -28,7 +30,7 @@ data class SpeechRequest(val id: String, val chunk: TextChunk, val voiceId: Stri
 
 data class SpeechEngineInfo(val id: String, val label: String)
 data class SpeechVoice(val id: String, val label: String, val languageTag: String, val offline: Boolean, val installed: Boolean, val quality: Int)
-data class VoiceCatalog(val engineId: String?, val engines: List<SpeechEngineInfo>, val voices: List<SpeechVoice>)
+data class VoiceCatalog(val engineId: String?, val engines: List<SpeechEngineInfo>, val voices: List<SpeechVoice>, val defaultVoiceId: String? = null)
 
 interface LocalNarrationEngine : NarrationEngine {
     suspend fun configure(engineId: String?): VoiceCatalog
@@ -37,5 +39,5 @@ interface LocalNarrationEngine : NarrationEngine {
     fun shutdown()
 }
 
-enum class SpeechFailure { NO_ENGINE, NO_OFFLINE_VOICE, INIT, ENGINE, DOCUMENT, LOCATION, NO_TEXT, AUDIO_FOCUS, STORAGE, SERVICE }
+enum class SpeechFailure { NO_ENGINE, NO_OFFLINE_VOICE, INIT, ENGINE, DOCUMENT, LOCATION, NO_TEXT, AUDIO_FOCUS, STORAGE, SERVICE, TIMEOUT }
 class SpeechException(val reason: SpeechFailure, val engineCode: Int? = null) : Exception(reason.name)

@@ -17,6 +17,23 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class) @Config(sdk = [36])
 class LocalNarrationEngineTest {
+    @Test fun `Android speak preserves queued voice loading instead of flushing the service queue`() {
+        val factory = AndroidSpeechPlatformFactory(org.robolectric.RuntimeEnvironment.getApplication())
+        val platform = factory.create("test.engine", {}, object : SpeechPlatform.Listener {
+            override fun done(id: String) = Unit
+            override fun range(id: String, start: Int, end: Int) = Unit
+            override fun error(id: String, code: Int) = Unit
+            override fun stopped(id: String) = Unit
+        })
+        try {
+            platform.stop()
+            assertTrue(platform.speak("Prueba sin libro", "queue-regression"))
+            val sdk = org.robolectric.shadows.ShadowTextToSpeech.getLastTextToSpeechInstance()
+            val shadow = org.robolectric.Shadows.shadowOf(sdk)
+            assertEquals(android.speech.tts.TextToSpeech.QUEUE_ADD, shadow.queueMode)
+            assertEquals("Prueba sin libro", shadow.lastSpokenText)
+        } finally { platform.shutdown() }
+    }
     private class Platform : SpeechPlatform, SpeechPlatform.Factory {
         lateinit var listener: SpeechPlatform.Listener
         var selected: String? = null
@@ -24,15 +41,22 @@ class LocalNarrationEngineTest {
         var stopped = 0
         var accept = true
         var ready = false
+        var creations = 0
+        var failInventoryOnce = false
         val ids = mutableListOf<String>()
         val texts = mutableListOf<String>()
         override fun ready() { ready = true }
         override fun engines() = listOf(SpeechEngineInfo("engine", "Motor"))
         override fun defaultEngine() = "engine"
         override fun create(engine: String, initialized: (Boolean) -> Unit, listener: SpeechPlatform.Listener): SpeechPlatform {
+            creations++
             this.listener = listener; initialized(true); return this
         }
-        override fun voices(): List<SpeechVoice> { check(ready); return listOf(SpeechVoice("local", "Español", "es", true, true, 200), SpeechVoice("network", "Red", "es", false, true, 500)) }
+        override fun voices(): List<SpeechVoice> {
+            check(ready)
+            if (failInventoryOnce) { failInventoryOnce = false; throw SpeechException(SpeechFailure.ENGINE, -4) }
+            return listOf(SpeechVoice("local", "Español", "es", true, true, 200), SpeechVoice("network", "Red", "es", false, true, 500))
+        }
         override fun selectVoice(id: String): Boolean { selected = id; return true }
         override fun setRate(rate: Float) = true
         override fun speak(text: String, id: String): Boolean { speaks++; ids += id; texts += text; return accept }
@@ -41,6 +65,100 @@ class LocalNarrationEngineTest {
     }
     private fun request(id: String, voice: String = "local") = SpeechRequest(id,
         TextChunk("Niño y canción.", TextLocator("chapter", 100), TextLocator("chapter", 115)), voice, 1f)
+
+    @Test fun `service failure before speech reconnects once and ignores old connection callbacks`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        val result = async { engine.narrate(request("recover")) }; runCurrent()
+        val old = platform.listener
+        old.error("recover", -4); runCurrent()
+        advanceTimeBy(300); runCurrent()
+        assertEquals(2, platform.creations)
+        assertEquals(2, platform.speaks)
+        old.done("recover"); runCurrent()
+        assertFalse(result.isCompleted)
+        platform.listener.started(platform.ids.last())
+        platform.listener.done(platform.ids.last()); runCurrent()
+        assertTrue(result.await().isSuccess)
+        engine.shutdown()
+    }
+
+    @Test fun `repeated service failure ends after a single recovery attempt`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        val result = async { engine.narrate(request("bounded")) }; runCurrent()
+        platform.listener.error(platform.ids.last(), -4); runCurrent()
+        advanceTimeBy(300); runCurrent()
+        platform.listener.error(platform.ids.last(), -4); runCurrent()
+        assertEquals(-4, (result.await().exceptionOrNull() as SpeechException).engineCode)
+        assertEquals(2, platform.creations)
+        engine.configure(null)
+        assertEquals(3, platform.creations)
+        engine.shutdown()
+    }
+
+    @Test fun `service failure after speech started never automatically repeats the phrase`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        val result = async { engine.narrate(request("started")) }; runCurrent()
+        platform.listener.started("started")
+        platform.listener.error("started", -4); runCurrent()
+        assertTrue(result.await().isFailure)
+        assertEquals(1, platform.speaks)
+        assertEquals(1, platform.creations)
+        engine.shutdown()
+    }
+
+    @Test fun `cancelling during recovery prevents a delayed new utterance`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        val result = async { engine.narrate(request("cancel")) }; runCurrent()
+        platform.listener.error("cancel", -4); runCurrent()
+        result.cancel(); runCurrent()
+        advanceTimeBy(1000); runCurrent()
+        assertEquals(1, platform.creations)
+        assertEquals(1, platform.speaks)
+        engine.shutdown()
+    }
+
+    @Test fun `unresponsive engine times out instead of keeping an utterance pending forever`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler), completionTimeoutMs = 1000) { it() }
+        engine.configure(null)
+        val result = async { engine.narrate(request("timeout")) }; runCurrent()
+        advanceTimeBy(1001); runCurrent()
+        assertEquals(SpeechFailure.TIMEOUT, (result.await().exceptionOrNull() as SpeechException).reason)
+        assertTrue(platform.stopped > 0)
+        engine.shutdown()
+    }
+
+    @Test fun `a stale cached binder is replaced while refreshing voices`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        platform.failInventoryOnce = true
+        val catalog = engine.configure(null)
+        assertTrue(catalog.voices.isNotEmpty())
+        assertEquals(2, platform.creations)
+        engine.shutdown()
+    }
+
+    @Test fun `a dead binder discovered just before speak is recovered before enqueueing text`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        engine.configure(null)
+        platform.failInventoryOnce = true
+        val result = async { engine.narrate(request("preflight")) }; runCurrent()
+        assertEquals(2, platform.creations)
+        assertEquals(1, platform.speaks)
+        platform.listener.done(platform.ids.last()); runCurrent()
+        assertTrue(result.await().isSuccess)
+        engine.shutdown()
+    }
 
     @Test fun `vendor error code is retained instead of a generic speech failure`() = runTest {
         val platform = Platform()
