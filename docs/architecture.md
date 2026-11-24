@@ -389,3 +389,39 @@ interno mantiene el servicio activo, pero no muestra «Leyendo» antes del callb
 Started. Copiar diagnóstico incluye versión, SDK, motor, voz, fase y código; excluye
 libro, título, ruta y texto. No se usa audio en disco ni se requieren dependencias
 nuevas. La corrección física debe volver a comprobarse en el teléfono.
+
+## ADR-014 — Lectura sincronizada y voz (0.5.0)
+
+El usuario confirmó que la voz ya se escucha en 0.4.2 (USER_REPORTED) y pidió
+recuadro de lectura, mayor expresividad y diseño oscuro minimalista. Esta decisión
+sustituye la paleta «tormenta medianoche» de arranque: superficies neutras opacas,
+texto marfil y acento cálido discreto. Se mantiene el contraste y la semántica de
+los controles; no se añaden dependencias ni fuentes descargadas.
+
+NarrationEvent.Progress transporta inicio y fin UTF-16 absolutos de sección.
+onRangeStart delimita palabras/rangos; onStart proporciona el rango de la unidad
+actual (hasta 350 caracteres) cuando el motor no da marcación precisa. No se
+simulan tiempos con un temporizador. Se preservan el ID padre y la cola QUEUE_ADD
+que resolvió la cancelación de carga de voz. El lector observa el mismo estado de
+narración; navegar a él no reinicia ni detiene el audio.
+
+ReaderViewModel verifica identidad de libro y excluye Probar voz. Traduce el inicio
+del rango mediante DocumentSession.locateText; solo carga otra página/fragmento
+cuando sale del actual. Los eventos por palabra actualizan un rango en memoria sin
+leer el documento, renderizar PDF ni escribir Room en cada evento. La paginación
+conserva el progreso de lectura; el bookmark de narración sigue siendo separado.
+La UI dibuja recuadros por línea con TextLayoutResult y lleva el rango al área
+visible. Se corrigen BOM y pares UTF-16. Navegar manualmente suspende seguimiento;
+«Volver a la voz» lo reactiva. Pausar conserva el último rango. PDF sincronizado usa
+texto extraído: no se prometen coordenadas sobre la imagen de página ni OCR.
+
+SpeechDelivery se guarda en el DataStore existente, con STANDARD como valor
+retrocompatible. Natural respeta la prosodia del motor; Narrativa reduce el ritmo,
+usa tono levemente grave y pausas; Expresiva introduce variaciones moderadas para
+preguntas/exclamaciones. BreakIterator divide frases conservando cada carácter y
+offset, limitado por speechParts a 350 unidades UTF-16. Se aplican setPitch y
+setSpeechRate reales antes de cada unidad; las pausas entre frases son cancelables.
+Cambiar interpretación pausa y requiere continuar explícitamente, igual que voz o
+velocidad. La muestra usa ese mismo perfil. Esto no crea una voz neuronal ni una
+actuación emocional: la calidad y el soporte dependen del motor instalado.
+No se introduce red, proveedor cloud, almacenamiento de audio ni cambio de Room.

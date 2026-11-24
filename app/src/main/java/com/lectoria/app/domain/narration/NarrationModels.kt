@@ -6,7 +6,10 @@ import com.lectoria.app.domain.model.ReadingLocator
 import java.time.Instant
 import kotlinx.coroutines.flow.StateFlow
 
-data class SpeechSettings(val engineId: String? = null, val voiceId: String? = null, val rate: Float = 1f) {
+enum class SpeechDelivery { STANDARD, NARRATIVE, LIVELY }
+data class SpokenRange(val start: com.lectoria.app.domain.model.TextLocator, val end: com.lectoria.app.domain.model.TextLocator)
+
+data class SpeechSettings(val engineId: String? = null, val voiceId: String? = null, val rate: Float = 1f, val delivery: SpeechDelivery = SpeechDelivery.STANDARD) {
     init { require(rate.isFinite() && rate in 0.5f..2f) }
 }
 
@@ -38,6 +41,7 @@ data class NarrationState(
     val hasPrevious: Boolean = false,
     val hasNext: Boolean = false,
     val preview: String = "",
+    val spokenRange: SpokenRange? = null,
     val catalog: VoiceCatalog = VoiceCatalog(null, emptyList(), emptyList()),
     val settings: SpeechSettings = SpeechSettings(),
     val loadingVoices: Boolean = false,
@@ -65,6 +69,7 @@ interface NarrationClient {
     suspend fun chooseEngine(id: String)
     suspend fun chooseVoice(id: String)
     suspend fun setRate(rate: Float)
+    suspend fun setDelivery(delivery: SpeechDelivery)
     suspend fun readerPosition(): BookId?
     fun listen(bookId: BookId, locator: ReadingLocator)
     fun play()

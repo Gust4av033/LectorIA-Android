@@ -1,6 +1,9 @@
 package com.lectoria.app.core.designsystem
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -11,18 +14,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 object Midnight {
-    val Background = Color(0xFF040A1C)
-    val Surface = Color(0xFF0A1633)
-    val Container = Color(0xFF123A9E)
-    val Primary = Color(0xFF2F6BFF)
-    val Highlight = Color(0xFF79DDFF)
-    val Text = Color(0xFFF3F6FF)
-    val MutedText = Color(0xFFB3C0DC)
+    val Background = Color(0xFF101010)
+    val Surface = Color(0xFF191919)
+    val Container = Color(0xFF2C2B28)
+    val Primary = Color(0xFFE8E0D2)
+    val Highlight = Color(0xFFD6C6A6)
+    val Text = Color(0xFFF2F0EA)
+    val MutedText = Color(0xFFAAA69E)
 }
 
 private val MidnightColors = darkColorScheme(
     primary = Midnight.Primary,
-    onPrimary = Color.White,
+    onPrimary = Midnight.Background,
     primaryContainer = Midnight.Container,
     onPrimaryContainer = Midnight.Text,
     secondary = Midnight.Highlight,
@@ -36,9 +39,9 @@ private val MidnightColors = darkColorScheme(
     surfaceVariant = Midnight.Surface,
     onSurfaceVariant = Midnight.MutedText,
     surfaceContainer = Midnight.Surface,
-    surfaceContainerHigh = Color(0xFF122044),
-    outline = Color(0xFF647495),
-    outlineVariant = Color(0xFF263657),
+    surfaceContainerHigh = Color(0xFF292929),
+    outline = Color(0xFF858178),
+    outlineVariant = Color(0xFF383632),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
 )
@@ -68,5 +71,7 @@ private val LectorTypography = Typography(
 
 @Composable
 fun LectorIaTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = MidnightColors, typography = LectorTypography, content = content)
+    MaterialTheme(colorScheme = MidnightColors, typography = LectorTypography) {
+        Surface(Modifier.fillMaxSize(), color = Midnight.Background, contentColor = Midnight.Text, content = content)
+    }
 }

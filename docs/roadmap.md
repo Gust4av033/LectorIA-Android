@@ -90,3 +90,14 @@ fallida con un reintento limitado y se añaden estados de conexión/diagnóstico
 La muestra del sistema sí funciona según el usuario; la app requiere nueva prueba
 física después de actualizar. Build y 94 tests locales PASS. No avanzar a Fase D
 hasta validar la escucha real de esta entrega.
+
+## Extensión — Lector sincronizado y estilo
+
+Rama `feature/lectura-sincronizada`, versión 0.5.0, sobre Fase C sin fusionar main.
+El usuario confirmó que ya se escucha la voz (USER_REPORTED); aún no acredita
+Bluetooth, llamadas o lectura prolongada con pantalla apagada.
+Implementados rango narrado, seguimiento desactivable en lector, perfiles locales
+de interpretación y nuevo diseño oscuro minimalista pedido por el usuario.
+Evidencia automática y pasos en teléfono: `testing-reader-sync.md`.
+La IA cloud sigue pendiente de backend, proveedor y consentimiento; no se añadió
+un servicio de pago ni archivos de audio.

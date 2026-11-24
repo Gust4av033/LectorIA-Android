@@ -45,6 +45,8 @@ class LocalNarrationEngineTest {
         var failInventoryOnce = false
         val ids = mutableListOf<String>()
         val texts = mutableListOf<String>()
+        val pitches = mutableListOf<Float>()
+        val rates = mutableListOf<Float>()
         override fun ready() { ready = true }
         override fun engines() = listOf(SpeechEngineInfo("engine", "Motor"))
         override fun defaultEngine() = "engine"
@@ -58,13 +60,55 @@ class LocalNarrationEngineTest {
             return listOf(SpeechVoice("local", "Español", "es", true, true, 200), SpeechVoice("network", "Red", "es", false, true, 500))
         }
         override fun selectVoice(id: String): Boolean { selected = id; return true }
-        override fun setRate(rate: Float) = true
+        override fun setRate(rate: Float): Boolean { rates += rate; return true }
+        override fun setPitch(pitch: Float): Boolean { pitches += pitch; return true }
         override fun speak(text: String, id: String): Boolean { speaks++; ids += id; texts += text; return accept }
         override fun stop() { stopped++ }
         override fun shutdown() = Unit
     }
     private fun request(id: String, voice: String = "local") = SpeechRequest(id,
         TextChunk("Niño y canción.", TextLocator("chapter", 100), TextLocator("chapter", 115)), voice, 1f)
+
+    @Test fun `expressive voice preserves source offsets and sends real prosody to the engine`() = runTest {
+        val platform = Platform()
+        val engine = AndroidLocalNarrationEngine(platform, StandardTestDispatcher(testScheduler)) { it() }
+        val events = mutableListOf<NarrationEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { engine.events.collect { events += it } }
+        engine.configure(null)
+        val text = "¿Vienes? ¡Vamos!"
+        val result = async { engine.narrate(request("expressive").copy(delivery = SpeechDelivery.LIVELY,
+            chunk = TextChunk(text, TextLocator("chapter", 100), TextLocator("chapter", 100L + text.length)))) }; runCurrent()
+        platform.listener.started(platform.ids.last()); runCurrent()
+        val fallback = events.filterIsInstance<NarrationEvent.Progress>().last()
+        assertEquals(TextLocator("chapter", 100), fallback.locator)
+        assertEquals(TextLocator("chapter", 100L + platform.texts.first().length), fallback.end)
+        platform.listener.range(platform.ids.last(), 1, 7); runCurrent()
+        val word = events.filterIsInstance<NarrationEvent.Progress>().last()
+        assertEquals(TextLocator("chapter", 101), word.locator)
+        assertEquals(TextLocator("chapter", 107), word.end)
+        platform.listener.done(platform.ids.last()); runCurrent()
+        advanceTimeBy(90); runCurrent()
+        assertEquals(2, platform.speaks)
+        platform.listener.done(platform.ids.last()); runCurrent()
+        assertTrue(result.await().isSuccess)
+        assertEquals(text, platform.texts.joinToString(""))
+        assertEquals(listOf(1.09f, 1.06f), platform.pitches)
+        assertEquals(1.03f, platform.rates.last())
+        engine.shutdown()
+    }
+
+    @Test fun `delivery splitting preserves Unicode whitespace and all text`() {
+        val text = "¿Cómo estás? ¡Bien! Niño 😀. ".repeat(90)
+        SpeechDelivery.entries.forEach { delivery ->
+            val parts = deliveryParts(text, delivery)
+            assertEquals(text, parts.joinToString(""))
+            assertTrue(parts.all { it.length <= 350 && !Character.isHighSurrogate(it.last()) })
+        }
+        assertEquals(SpeechProsody(1f, 1f, 0), speechProsody("Hola.", 1f, SpeechDelivery.STANDARD))
+        assertEquals(1.09f, speechProsody("¿Vienes?»", 1f, SpeechDelivery.LIVELY).pitch)
+        assertEquals(2f, speechProsody("Hola!", 2f, SpeechDelivery.LIVELY).rate)
+        assertEquals(0.5f, speechProsody("Hola.", 0.5f, SpeechDelivery.NARRATIVE).rate)
+    }
 
     @Test fun `service failure before speech reconnects once and ignores old connection callbacks`() = runTest {
         val platform = Platform()

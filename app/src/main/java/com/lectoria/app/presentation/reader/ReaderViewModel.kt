@@ -21,7 +21,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.awaitCancellation
+import com.lectoria.app.domain.narration.NarrationClient
+import com.lectoria.app.domain.narration.NarrationState
+import com.lectoria.app.domain.narration.SpeechPhase
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +43,10 @@ data class ReaderUiState(
     val saveFailed: Boolean = false,
     val imageFailed: Boolean = false,
     val extractionAllowed: Boolean = true,
+    val highlight: ReaderHighlight? = null,
+    val followingVoice: Boolean = true,
+    val hasNarration: Boolean = false,
+    val voicePlaying: Boolean = false,
 )
 
 @HiltViewModel
@@ -48,6 +54,7 @@ class ReaderViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
     private val openReader: OpenReader,
     private val saveProgress: SaveReadingProgress,
+    private val narration: NarrationClient,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ReaderUiState())
     val state = mutableState.asStateFlow()
@@ -75,7 +82,7 @@ class ReaderViewModel @Inject constructor(
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (error: Exception) { showFailure(error) }
                 }
-                awaitCancellation()
+                narration.state.collect { spoken -> mutex.withLock { synchronize(spoken) } }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { showFailure(error) }
             finally {
@@ -86,7 +93,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun release() { action?.cancel(); lifetime?.cancel() }
+    fun release(): Job? { action?.cancel(); lifetime?.cancel(); return lifetime }
 
     fun retry() { if (session == null) reload() else lastRequested?.let(::go) }
 
@@ -96,7 +103,7 @@ class ReaderViewModel @Inject constructor(
 
     fun go(locator: ReadingLocator) {
         if (state.value.busy || session == null) return
-        mutableState.update { it.copy(busy = true, failure = null) }
+        mutableState.update { it.copy(busy = true, failure = null, followingVoice = false) }
         action = viewModelScope.launch {
             mutex.withLock {
                 try { display(locator) }
@@ -104,6 +111,32 @@ class ReaderViewModel @Inject constructor(
                 catch (error: Exception) { showFailure(error) }
             }
         }
+    }
+
+    fun followVoice() {
+        mutableState.update { it.copy(followingVoice = !it.followingVoice) }
+        if (state.value.followingVoice) action = viewModelScope.launch {
+            mutex.withLock { synchronize(narration.state.value) }
+        }
+    }
+
+    private fun matchesNarration(spoken: NarrationState): Boolean =
+        state.value.book != null && spoken.book?.id == state.value.book?.id && !spoken.testingVoice &&
+            (spoken.active || spoken.phase == SpeechPhase.PAUSED)
+
+    private suspend fun synchronize(spoken: NarrationState) {
+        val sameBook = matchesNarration(spoken)
+        mutableState.update { it.copy(hasNarration = sameBook, voicePlaying = sameBook && spoken.active) }
+        val range = spoken.spokenRange.takeIf { sameBook }
+        if (range != null && state.value.followingVoice && !containsSpokenStart(state.value.page, range.start)) {
+            try { display(checkNotNull(session).locateText(range.start)) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                showFailure(error)
+                mutableState.update { it.copy(followingVoice = false) }
+            }
+        }
+        mutableState.update { it.copy(highlight = readerHighlight(it.page, range)) }
     }
 
     fun retrySave() {
@@ -124,6 +157,9 @@ class ReaderViewModel @Inject constructor(
         val image = try { active.image(page.locator) }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { imageFailed = true; null }
-        mutableState.update { it.copy(page = page, image = image, busy = false, failure = null, saveFailed = saveFailed, imageFailed = imageFailed) }
+        val spoken = narration.state.value
+        mutableState.update { it.copy(page = page, image = image, busy = false, failure = null,
+            saveFailed = saveFailed, imageFailed = imageFailed,
+            highlight = readerHighlight(page, spoken.spokenRange.takeIf { matchesNarration(spoken) })) }
     }
 }

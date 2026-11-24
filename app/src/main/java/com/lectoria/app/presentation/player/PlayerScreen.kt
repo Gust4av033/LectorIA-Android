@@ -29,13 +29,14 @@ class PlayerViewModel @Inject constructor(val client: NarrationClient) : ViewMod
     fun engine(id: String) { viewModelScope.launch { client.chooseEngine(id) } }
     fun voice(id: String) { viewModelScope.launch { client.chooseVoice(id) } }
     fun rate(rate: Float) { viewModelScope.launch { client.setRate(rate) } }
+    fun delivery(delivery: SpeechDelivery) { viewModelScope.launch { client.setDelivery(delivery) } }
     fun read(onBook: (String) -> Unit) { viewModelScope.launch { client.readerPosition()?.let { onBook(it.value) } } }
 }
 
 data class PlayerActions(
     val play: () -> Unit = {}, val pause: () -> Unit = {}, val previous: () -> Unit = {}, val next: () -> Unit = {},
     val stop: () -> Unit = {}, val library: () -> Unit = {}, val read: () -> Unit = {}, val refresh: () -> Unit = {},
-    val test: () -> Unit = {}, val reconnect: () -> Unit = {}, val engine: (String) -> Unit = {}, val voice: (String) -> Unit = {}, val rate: (Float) -> Unit = {},
+    val test: () -> Unit = {}, val reconnect: () -> Unit = {}, val engine: (String) -> Unit = {}, val voice: (String) -> Unit = {}, val rate: (Float) -> Unit = {}, val delivery: (SpeechDelivery) -> Unit = {},
 )
 
 @Composable
@@ -43,7 +44,7 @@ fun PlayerRoute(onLibrary: () -> Unit, onReader: (String) -> Unit, settingsOnly:
     val state by viewModel.state.collectAsStateWithLifecycle()
     PlayerScreen(state, PlayerActions(viewModel.client::play, viewModel.client::pause, viewModel.client::previous,
         viewModel.client::next, viewModel.client::stop, onLibrary, { viewModel.read(onReader) }, viewModel::refresh,
-        viewModel.client::testVoice, viewModel.client::reconnectVoice, viewModel::engine, viewModel::voice, viewModel::rate), settingsOnly)
+        viewModel.client::testVoice, viewModel.client::reconnectVoice, viewModel::engine, viewModel::voice, viewModel::rate, viewModel::delivery), settingsOnly)
 }
 
 @Composable
@@ -140,6 +141,22 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
                     Text(String.format(Locale.getDefault(), "%.1f×", state.settings.rate), style = MaterialTheme.typography.titleLarge)
                     LectorTextButton(onClick = { actions.rate((state.settings.rate + 0.1f).coerceAtMost(2f)) }, enabled = state.settings.rate < 2f) { Text("Más rápida") }
                 }
+                HorizontalDivider(color = Midnight.MutedText.copy(alpha = 0.2f))
+                Text("Interpretación", style = MaterialTheme.typography.titleMedium)
+                SpeechDelivery.entries.forEach { delivery ->
+                    LectorTextButton(onClick = { actions.delivery(delivery) }, modifier = Modifier.fillMaxWidth().testTag("delivery_${delivery.name}")) {
+                        RadioButton(selected = state.settings.delivery == delivery, onClick = null)
+                        Column(Modifier.weight(1f)) {
+                            Text(when (delivery) { SpeechDelivery.STANDARD -> "Natural"; SpeechDelivery.NARRATIVE -> "Narrativa"; SpeechDelivery.LIVELY -> "Expresiva" })
+                            Text(when (delivery) {
+                                SpeechDelivery.STANDARD -> "La entonación original de tu voz"
+                                SpeechDelivery.NARRATIVE -> "Ritmo sereno y pausas entre frases"
+                                SpeechDelivery.LIVELY -> "Más contraste en preguntas y exclamaciones"
+                            }, style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
+                        }
+                    }
+                }
+                Text("Ajusta tono, ritmo y pausas. El resultado depende de la voz instalada.", style = MaterialTheme.typography.bodySmall, color = Midnight.MutedText)
             }
         }
         if (state.preview.isNotBlank() && !settingsOnly) {
@@ -148,7 +165,7 @@ fun PlayerScreen(state: NarrationState, actions: PlayerActions, settingsOnly: Bo
         }
         LectorTextButton(onClick = { help = !help }) { Text(if (help) "Cerrar ayuda" else "Ayuda con la voz") }
         if (help || settingsOnly) {
-            Text("Cambiar la voz o velocidad pausa la escucha. Pulsa Escuchar para continuar. La pausa retoma la última palabra indicada por el motor; algunos motores repiten parte del texto.", color = Midnight.MutedText)
+            Text("Cambiar la voz, velocidad o interpretación pausa la escucha. Pulsa Escuchar para continuar. La pausa retoma la última palabra indicada por el motor; algunos motores repiten parte del texto.", color = Midnight.MutedText)
             LectorTextButton(onClick = actions.refresh, enabled = !state.active && !state.loadingVoices) { Text("Actualizar voces instaladas") }
             LectorTextButton(onClick = {
                 try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) }
@@ -239,7 +256,7 @@ fun speechFailureText(failure: SpeechFailure): String = when (failure) {
 }
 
 internal fun voiceDiagnostic(state: NarrationState): String = """
-    Lector IA 0.4.2 · Android ${android.os.Build.VERSION.SDK_INT}
+    Lector IA 0.5.0 · Android ${android.os.Build.VERSION.SDK_INT}
     Motor: ${state.settings.engineId ?: "sin seleccionar"}
     Voz: ${state.settings.voiceId ?: "sin seleccionar"}
     Estado: ${state.phase.name}

@@ -18,13 +18,13 @@ interface NarrationEngine {
 sealed interface NarrationEvent {
     data class Started(val requestId: String) : NarrationEvent
     data class Reconnecting(val requestId: String) : NarrationEvent
-    data class Progress(val requestId: String, val locator: TextLocator) : NarrationEvent
+    data class Progress(val requestId: String, val locator: TextLocator, val end: TextLocator? = null) : NarrationEvent
     data class AudioReady(val requestId: String, val localPath: String) : NarrationEvent
     data class Completed(val requestId: String) : NarrationEvent
     data class Failed(val requestId: String, val reason: String) : NarrationEvent
 }
 
-data class SpeechRequest(val id: String, val chunk: TextChunk, val voiceId: String, val rate: Float) {
+data class SpeechRequest(val id: String, val chunk: TextChunk, val voiceId: String, val rate: Float, val delivery: SpeechDelivery = SpeechDelivery.STANDARD) {
     init { require(id.isNotBlank() && voiceId.isNotBlank() && rate.isFinite() && rate in 0.5f..2f) }
 }
 

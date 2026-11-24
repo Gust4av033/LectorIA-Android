@@ -217,6 +217,14 @@ El filesystem y Room no comparten una transacción atómica; implementar protoco
 
 ### 5.1 Identidad — DECIDIDO
 
+**Actualización autorizada por el usuario, 24/11/2026:** la versión 0.5.0 adopta
+un diseño oscuro minimalista neutro, con texto marfil y acento cálido discreto.
+Los tokens azules siguientes quedan como referencia histórica de arranque.
+Se añade seguimiento del rango narrado según callbacks reales del TTS, sin
+prometer exactitud palabra a palabra en todos los motores ni sobre imágenes PDF.
+Perfiles locales de tono/ritmo/pausa amplían los ajustes; la narración IA cloud
+continúa fuera de esta entrega. Detalle: ADR-014 en `architecture.md`.
+
 | Token | Valor de referencia |
 |---|---|
 | `background` | `#040A1C` |

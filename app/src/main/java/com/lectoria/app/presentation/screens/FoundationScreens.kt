@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -91,14 +90,12 @@ fun PendingScreen(
 internal fun GlassCard(content: @Composable () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = Midnight.Surface.copy(alpha = 0.8f),
+        shape = RoundedCornerShape(20.dp),
+        color = Midnight.Surface,
         border = BorderStroke(1.dp, Midnight.Highlight.copy(alpha = 0.12f)),
     ) {
         Box(
-            Modifier.background(
-                Brush.linearGradient(listOf(Midnight.Container.copy(alpha = 0.16f), Midnight.Surface.copy(alpha = 0f))),
-            ).padding(26.dp),
+            Modifier.padding(22.dp),
         ) { content() }
     }
 }

@@ -297,17 +297,19 @@ class NarrationCoordinatorTest {
         assertNotNull(r.books.find(book().id))
     }
 
-    @Test fun `voice and speed changes persist and pause until explicitly played`() = runTest {
+    @Test fun `voice speed and delivery changes persist and pause until explicitly played`() = runTest {
         val r = Rig(this)
         r.coordinator.start(book().id, ReadingLocator.Text(0)); runCurrent()
         r.coordinator.chooseVoice(english.id)
-        r.coordinator.setRate(1.3f); runCurrent()
+        r.coordinator.setRate(1.3f)
+        r.coordinator.setDelivery(SpeechDelivery.NARRATIVE); runCurrent()
         assertEquals(SpeechPhase.PAUSED, r.coordinator.state.value.phase)
         assertEquals(1, r.engine.requests.size)
         assertEquals(english.id, r.prefs.settings.voiceId)
         r.coordinator.start(); runCurrent()
         assertEquals(1.3f, r.engine.requests.last().rate)
         assertEquals(english.id, r.engine.requests.last().voiceId)
+        assertEquals(SpeechDelivery.NARRATIVE, r.engine.requests.last().delivery)
     }
 
     @Test fun `pause during document preparation prevents delayed autoplay`() = runTest {

@@ -94,3 +94,16 @@ usar QUEUE_ADD. Recuperación limitada del -4, timeout, confirmación por callba
 voz predeterminada offline y reconexión manual implementados. 94 pruebas locales
 PASS; el usuario confirma voz audible en ajustes de Android y fallo en la app.
 Repetición de la prueba física tras esta corrección: pendiente.
+
+## Extensión 0.5.0 — 24/11/2026
+
+| Requisito | Implementación | Evidencia |
+|---|---|---|
+| Recuadro del texto narrado | Rango UTF-16 real, recuadro por línea y seguimiento al entrar al lector | ReaderSynchronizationTest, LocalNarrationEngineTest, ReaderScreenTest |
+| Explorar durante escucha | Navegación manual suspende seguimiento, Volver a la voz reactiva sin autoplay | ReaderSynchronizationTest |
+| Entonación local ajustable | Natural/Narrativa/Expresiva, pitch/rate/pausas, preferencias persistidas | LocalNarrationEngineTest, SpeechPreferencesTest, PlayerScreenTest |
+| Diseño oscuro minimalista | Superficies grises opacas, texto marfil, acento cálido; decisión explícita del usuario | ThemeContrastTest y capturas sintéticas |
+
+La precisión del recuadro depende de los callbacks TTS. PDF usa su modo textual;
+los escaneados necesitan OCR fuera de alcance. La expresividad local no garantiza
+emociones humanas ni equivale a narración IA cloud. Pruebas físicas: pendientes.

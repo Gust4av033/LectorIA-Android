@@ -17,6 +17,7 @@ class AndroidNarrationClient(private val context: Context, private val coordinat
     override suspend fun chooseEngine(id: String) = withContext(Dispatchers.Main.immediate) { coordinator.chooseEngine(id) }
     override suspend fun chooseVoice(id: String) = withContext(Dispatchers.Main.immediate) { coordinator.chooseVoice(id) }
     override suspend fun setRate(rate: Float) = withContext(Dispatchers.Main.immediate) { coordinator.setRate(rate) }
+    override suspend fun setDelivery(delivery: com.lectoria.app.domain.narration.SpeechDelivery) = withContext(Dispatchers.Main.immediate) { coordinator.setDelivery(delivery) }
     override suspend fun readerPosition() = withContext(Dispatchers.Main.immediate) { coordinator.readerPosition() }
     private fun send(action: String, id: BookId? = null, locator: ReadingLocator? = null) {
         try {
